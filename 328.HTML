@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>三角比建構者 - 原生滿版精準觸控版</title>
+    <title>三角比建構者 - 33%自動縮放與防卡死穩定版</title>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
@@ -12,83 +12,80 @@
             --dark: #030712; --light: #F8FAFC; --accent: #FACC15;
             --glowing-cyan: #06B6D4;
         }
+        /* 移除 transition: zoom 以防止大螢幕重繪導致的卡頓與座標錯位 */
         body { font-family: 'Segoe UI', sans-serif; margin: 0; background-color: var(--dark); color: var(--light); overflow: hidden; user-select: none; touch-action: none; }
         
         .game-wrapper { display: flex; width: 100vw; height: 100vh; overflow: hidden; }
 
-        /* 左側：主畫面幾何區 (佔 2/3) */
-        .geometry-pane { position: relative; flex: 2; height: 100%; border-right: 0.4vw solid #334155; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box; cursor: crosshair;}
+        .geometry-pane { position: relative; flex: 2; height: 100%; border-right: 4px solid #334155; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box; cursor: crosshair;}
         
         #main-canvas, #particle-canvas, #ripple-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; object-fit: cover;}
         #particle-canvas { z-index: 2; pointer-events: none; }
         #ripple-canvas { z-index: 3; pointer-events: none; }
 
-        /* 題目浮動區 */
-        .q-floating-header { position: absolute; top: 3vh; left: 0; width: 100%; z-index: 10; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
-        .question-stem { font-size: 3.5vh; font-weight: bold; background: rgba(3, 7, 18, 0.9); padding: 2vh 4vw; border-radius: 2vh; border: 0.3vh solid #475569; box-shadow: 0 1vh 3vh rgba(0,0,0,0.6); text-shadow: 0 0 1.5vh var(--light); }
-        .instruction-text { font-size: 2.2vh; color: var(--accent); margin-top: 1.5vh; font-weight: bold; text-shadow: 0 0 1vh rgba(250,204,21,0.5); padding: 0.5vh 2vw; background: rgba(0,0,0,0.6); border-radius: 1vh;}
+        .q-floating-header { position: absolute; top: 30px; left: 0; width: 100%; z-index: 10; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
+        .question-stem { font-size: 3.5rem; font-weight: bold; background: rgba(3, 7, 18, 0.9); padding: 18px 55px; border-radius: 20px; border: 3px solid #475569; box-shadow: 0 12px 35px rgba(0,0,0,0.6); text-shadow: 0 0 15px var(--light); }
+        .instruction-text { font-size: 2.2rem; color: var(--accent); margin-top: 15px; font-weight: bold; text-shadow: 0 0 10px rgba(250,204,21,0.5); padding: 5px 25px; background: rgba(0,0,0,0.6); border-radius: 12px;}
 
-        .level-up-banner { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0.5); font-size: 5vh; font-weight: bold; color: var(--accent); text-shadow: 0 0 4vh var(--accent); z-index: 50; opacity: 0; pointer-events: none; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); background: rgba(0,0,0,0.8); padding: 2vh 4vw; border-radius: 2vh; border: 0.4vh solid var(--accent); white-space: nowrap;}
+        .level-up-banner { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0.5); font-size: 5rem; font-weight: bold; color: var(--accent); text-shadow: 0 0 40px var(--accent); z-index: 50; opacity: 0; pointer-events: none; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); background: rgba(0,0,0,0.8); padding: 20px 40px; border-radius: 20px; border: 4px solid var(--accent); white-space: nowrap;}
         .level-up-banner.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 
-        /* 右側：公式資訊區 (佔 1/3) */
-        .info-pane { flex: 1; height: 100%; background: radial-gradient(circle at top right, #1f2937 0%, #030712 100%); display: flex; flex-direction: column; padding: 4vh; box-sizing: border-box; justify-content: space-between; align-items: stretch; border-left: 0.2vw solid #1f2937; z-index: 10;}
+        .info-pane { flex: 1; height: 100%; background: radial-gradient(circle at top right, #1f2937 0%, #030712 100%); display: flex; flex-direction: column; padding: 40px; box-sizing: border-box; justify-content: space-between; align-items: stretch; border-left: 2px solid #1f2937; z-index: 10;}
 
-        .info-card { background: rgba(255,255,255,0.03); border: 0.3vh solid #334155; border-radius: 2.5vh; padding: 2.5vh; text-align: center; box-shadow: 0 1vh 3vh rgba(0,0,0,0.4); margin-bottom: 2.5vh;}
-        .player-info { font-size: 2.2vh; color: #94A3B8; margin-bottom: 1vh; font-weight: bold; }
-        .score-box { font-size: 3vh; color: var(--accent); font-weight: bold; font-family: monospace; }
-        .combo-box { font-size: 2.5vh; color: var(--glowing-cyan); font-style: italic; opacity: 0; transition: opacity 0.2s, transform 0.2s; margin-top: 1vh; }
+        .info-card { background: rgba(255,255,255,0.03); border: 3px solid #334155; border-radius: 25px; padding: 25px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.4); margin-bottom: 25px;}
+        .player-info { font-size: 2rem; color: #94A3B8; margin-bottom: 10px; font-weight: bold; }
+        .score-box { font-size: 2.8rem; color: var(--accent); font-weight: bold; font-family: monospace; }
+        .combo-box { font-size: 2.2rem; color: var(--glowing-cyan); font-style: italic; opacity: 0; transition: opacity 0.2s, transform 0.2s; margin-top: 5px; }
         .combo-box.show { opacity: 1; transform: scale(1.1); }
-        .penalty-box { font-size: 2vh; color: var(--danger); font-weight: bold; opacity: 0; margin-top: 1vh; transition: opacity 0.2s;}
+        .penalty-box { font-size: 1.8rem; color: var(--danger); font-weight: bold; opacity: 0; margin-top: 5px; transition: opacity 0.2s;}
         
-        .timer-box { font-size: 4.5vh; color: var(--success); font-weight: bold; font-family: monospace; text-shadow: 0 0 2vh rgba(16,185,129,0.5); margin-top: 1vh;}
-        .timer-warning { color: var(--danger); text-shadow: 0 0 2vh rgba(239,68,68,0.8); animation: pulseTimer 0.5s infinite alternate; }
+        .timer-box { font-size: 4rem; color: var(--success); font-weight: bold; font-family: monospace; text-shadow: 0 0 20px rgba(16,185,129,0.5); margin-top: 10px;}
+        .timer-warning { color: var(--danger); text-shadow: 0 0 20px rgba(239,68,68,0.8); animation: pulseTimer 0.5s infinite alternate; }
         @keyframes pulseTimer { from { transform: scale(1); } to { transform: scale(1.05); } }
 
-        /* 公式建構區 */
-        .formula-zone { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; background: rgba(0,0,0,0.2); border-radius: 2.5vh; border: 0.4vh solid var(--primary); padding: 4vh; box-shadow: 0 0 4vh rgba(59, 130, 246, 0.2); margin-bottom: 2.5vh; transition: filter 0.3s;}
+        .formula-zone { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; background: rgba(0,0,0,0.2); border-radius: 25px; border: 4px solid var(--primary); padding: 40px; box-shadow: 0 0 40px rgba(59, 130, 246, 0.2); margin-bottom: 25px; transition: filter 0.3s;}
         .formula-zone.locked { filter: grayscale(100%) opacity(0.3); pointer-events: none;}
-        .formula-title { font-size: 2.8vh; color: #94A3B8; margin-top: 0; margin-bottom: 3vh; letter-spacing: 0.2vw;}
+        .formula-title { font-size: 2.5rem; color: #94A3B8; margin-top: 0; margin-bottom: 30px; letter-spacing: 2px;}
         
-        .fraction-builder { display: flex; align-items: center; gap: 2vw; font-family: 'Times New Roman', serif; }
-        .func-label { font-size: 6vh; font-weight: bold; color: var(--light); }
-        .fraction-visual { display: flex; flex-direction: column; align-items: center; gap: 1.5vh; width: 14vw; }
-        .slot { width: 12vw; height: 10vh; border: 0.6vh dashed #475569; border-radius: 1.8vh; display: flex; justify-content: center; align-items: center; font-size: 4vh; font-weight: bold; color: #64748B; transition: all 0.2s; }
+        .fraction-builder { display: flex; align-items: center; gap: 25px; font-family: 'Times New Roman', serif; }
+        .func-label { font-size: 6rem; font-weight: bold; color: var(--light); }
+        .fraction-visual { display: flex; flex-direction: column; align-items: center; gap: 15px; width: 220px; }
+        .slot { width: 200px; height: 95px; border: 6px dashed #475569; border-radius: 18px; display: flex; justify-content: center; align-items: center; font-size: 4rem; font-weight: bold; color: #64748B; transition: all 0.2s; }
         
-        @keyframes pulseActiveSlot { 0%, 100% { border-color: var(--accent); box-shadow: 0 0 2vh rgba(250, 204, 21, 0.3); transform: scale(1.02); background: rgba(250, 204, 21, 0.05); color: var(--accent); } 50% { border-color: #FFF; box-shadow: 0 0 6vh rgba(250, 204, 21, 0.8); transform: scale(1.1); background: rgba(250, 204, 21, 0.2); color: #FFF; } }
+        @keyframes pulseActiveSlot { 0%, 100% { border-color: var(--accent); box-shadow: 0 0 20px rgba(250, 204, 21, 0.3); transform: scale(1.02); background: rgba(250, 204, 21, 0.05); color: var(--accent); } 50% { border-color: #FFF; box-shadow: 0 0 60px rgba(250, 204, 21, 0.8); transform: scale(1.1); background: rgba(250, 204, 21, 0.2); color: #FFF; } }
         .slot.active { animation: pulseActiveSlot 0.7s infinite; border-style: solid; z-index: 10; }
-        .slot.filled { border-style: solid; border-color: var(--primary); color: var(--primary); background: rgba(59, 130, 246, 0.15); font-size: 5vh; box-shadow: 0 0 3vh rgba(59, 130, 246, 0.4); transform: scale(1); animation: none; z-index: 1; }
-        .frac-line { width: 100%; height: 0.8vh; background-color: var(--light); border-radius: 0.4vh; }
+        .slot.filled { border-style: solid; border-color: var(--primary); color: var(--primary); background: rgba(59, 130, 246, 0.15); font-size: 5rem; box-shadow: 0 0 30px rgba(59, 130, 246, 0.4); transform: scale(1); animation: none; z-index: 1; }
+        .frac-line { width: 100%; height: 8px; background-color: var(--light); border-radius: 4px; }
 
-        @keyframes bgShake { 0% { transform: translate(0,0); } 20% { transform: translate(-2vw, 1.5vh) rotate(-1deg); } 40% { transform: translate(2vw, -1.5vh) rotate(1deg); } 60% { transform: translate(-2vw, -1.5vh) rotate(-1deg); } 80% { transform: translate(2vw, 1.5vh) rotate(1deg); } 100% { transform: translate(0,0); } }
-        .main-error { animation: bgShake 0.35s ease-in-out both; border-right: 1.5vw solid var(--danger) !important; box-shadow: inset 0 0 15vw rgba(239,68,68,0.7) !important; }
-        .main-success { border-right: 1.5vw solid var(--success); box-shadow: inset 0 0 10vw rgba(16,185,129,0.3); transition: all 0.3s; }
+        @keyframes bgShake { 0% { transform: translate(0,0); } 20% { transform: translate(-25px, 15px) rotate(-1deg); } 40% { transform: translate(25px, -15px) rotate(1deg); } 60% { transform: translate(-25px, -15px) rotate(-1deg); } 80% { transform: translate(25px, 15px) rotate(1deg); } 100% { transform: translate(0,0); } }
+        .main-error { animation: bgShake 0.35s ease-in-out both; border-right: 15px solid var(--danger) !important; box-shadow: inset 0 0 250px rgba(239,68,68,0.7) !important; }
+        .main-success { border-right: 15px solid var(--success); box-shadow: inset 0 0 150px rgba(16,185,129,0.3); transition: all 0.3s; }
 
-        .overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(7, 11, 20, 0.99); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(1.5vh); }
+        .overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(7, 11, 20, 0.99); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(15px); }
         .hidden { display: none !important; }
         
-        .player-input { font-size: 3vh; padding: 2vh 4vw; border-radius: 2vh; border: 0.4vh solid #475569; background: rgba(15,23,42,0.8); color: var(--light); text-align: center; margin-top: 4vh; width: 30vw; transition: border-color 0.3s; outline: none; }
-        .player-input:focus { border-color: var(--primary); box-shadow: 0 0 2vh rgba(59, 130, 246, 0.5); }
-        .mega-btn { padding: 3vh 6vw; font-size: 3.5vh; background: var(--primary); color: white; border: none; border-radius: 2vh; cursor: pointer; margin-top: 3vh; box-shadow: 0 1.5vh 4vh rgba(37, 99, 235, 0.5); transition: all 0.2s;}
-        .mega-btn:hover { transform: scale(1.05) translateY(-0.5vh); background: #1D4ED8; }
+        .player-input { font-size: 2.5rem; padding: 20px 40px; border-radius: 20px; border: 4px solid #475569; background: rgba(15,23,42,0.8); color: var(--light); text-align: center; margin-top: 40px; width: 500px; outline: none; }
+        .player-input:focus { border-color: var(--primary); box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
+        .mega-btn { padding: 25px 80px; font-size: 3.5rem; background: var(--primary); color: white; border: none; border-radius: 20px; cursor: pointer; margin-top: 30px; box-shadow: 0 15px 40px rgba(37, 99, 235, 0.5); transition: all 0.2s;}
+        .mega-btn:hover { transform: scale(1.05) translateY(-5px); background: #1D4ED8; }
 
-        .leaderboard-box { background: rgba(15, 23, 42, 0.9); border: 0.4vh solid var(--accent); border-radius: 2.5vh; padding: 3vh 5vw; width: 50vw; box-shadow: 0 2vh 6vh rgba(0,0,0,0.8); margin: 3vh 0; }
-        .leaderboard-table { width: 100%; border-collapse: collapse; font-size: 3vh; text-align: center; }
-        .leaderboard-table th { color: #94A3B8; padding-bottom: 1.5vh; border-bottom: 0.2vh solid #334155; }
-        .leaderboard-table td { padding: 1.5vh 0; border-bottom: 0.1vh solid #1e293b; }
-        @keyframes slideInRank { 0% { opacity: 0; transform: translateX(5vw); } 100% { opacity: 1; transform: translateX(0); } }
-        @keyframes pulseRank { 0%, 100% { background: rgba(250, 204, 21, 0.2); transform: scale(1); box-shadow: 0 0 2vh rgba(250, 204, 21, 0.4); } 50% { background: rgba(250, 204, 21, 0.4); transform: scale(1.02); box-shadow: 0 0 4vh rgba(250, 204, 21, 0.8); } }
-        .current-player-rank { color: var(--accent); font-weight: bold; border-radius: 1vh; animation: pulseRank 1s infinite alternate !important; }
+        .leaderboard-box { background: rgba(15, 23, 42, 0.9); border: 4px solid var(--accent); border-radius: 25px; padding: 30px 50px; width: 700px; box-shadow: 0 20px 60px rgba(0,0,0,0.8); margin: 30px 0; }
+        .leaderboard-table { width: 100%; border-collapse: collapse; font-size: 2.5rem; text-align: center; }
+        .leaderboard-table th { color: #94A3B8; padding-bottom: 15px; border-bottom: 2px solid #334155; }
+        .leaderboard-table td { padding: 15px 0; border-bottom: 1px solid #1e293b; }
+        @keyframes slideInRank { 0% { opacity: 0; transform: translateX(50px); } 100% { opacity: 1; transform: translateX(0); } }
+        @keyframes pulseRank { 0%, 100% { background: rgba(250, 204, 21, 0.2); transform: scale(1); box-shadow: 0 0 20px rgba(250, 204, 21, 0.4); } 50% { background: rgba(250, 204, 21, 0.4); transform: scale(1.02); box-shadow: 0 0 40px rgba(250, 204, 21, 0.8); } }
+        .current-player-rank { color: var(--accent); font-weight: bold; border-radius: 10px; animation: pulseRank 1s infinite alternate !important; }
 
-        .ritual-text { position: absolute; font-size: 7vh; font-weight: bold; font-style: italic; opacity: 0; z-index: 50; text-shadow: 0 0 3vh rgba(0,0,0,0.9); pointer-events: none; }
-        @keyframes flyUp { 0% { opacity: 1; transform: translateY(4vh) scale(0.5); } 20% { opacity: 1; transform: translateY(0) scale(1.2); } 80% { opacity: 1; transform: translateY(-10vh) scale(1); } 100% { opacity: 0; transform: translateY(-15vh) scale(0.8); } }
+        .ritual-text { position: absolute; font-size: 7rem; font-weight: bold; font-style: italic; opacity: 0; z-index: 50; text-shadow: 0 0 30px rgba(0,0,0,0.9); pointer-events: none; }
+        @keyframes flyUp { 0% { opacity: 1; transform: translateY(40px) scale(0.5); } 20% { opacity: 1; transform: translateY(0) scale(1.2); } 80% { opacity: 1; transform: translateY(-100px) scale(1); } 100% { opacity: 0; transform: translateY(-150px) scale(0.8); } }
     </style>
 </head>
 <body>
 
 <div id="start-screen" class="overlay">
-    <h1 style="font-size: 8vh; margin-bottom: 0; text-shadow: 0 0 5vh var(--glowing-cyan); color: var(--glowing-cyan);">⚔️ 三角比建構者 ⚔️</h1>
-    <p style="font-size: 3vh; color: #94A3B8; margin-top: 1vh; font-weight: bold;">原生 100% 滿版自適應 ＆ 精準觸控版</p>
+    <h1 style="font-size: 7rem; margin-bottom: 0; text-shadow: 0 0 50px var(--glowing-cyan); color: var(--glowing-cyan);">⚔️ 三角比建構者 ⚔️</h1>
+    <p style="font-size: 2.5rem; color: #94A3B8; margin-top: 10px; font-weight: bold;">30秒生存 ＆ 自由解構版</p>
     
     <input type="text" id="player-name" class="player-input" placeholder="輸入玩家代號..." autocomplete="off" maxlength="12">
     <button class="mega-btn" onclick="startGame()">接受挑戰</button>
@@ -112,7 +109,7 @@
         <div class="info-card">
             <div class="player-info" id="player-display">玩家: 挑戰者</div>
             <div class="timer-box" id="timer-display">30.0</div>
-            <div style="height: 0.2vh; background: #334155; margin: 1.5vh 0;"></div>
+            <div style="height: 2px; background: #334155; margin: 15px 0;"></div>
             <div class="score-box">分數: <span id="score-display">0</span></div>
             <div class="combo-box" id="combo-display">x1 Combo!</div>
             <div class="penalty-box" id="penalty-display" style="opacity: 0;">連錯懲罰: -100</div>
@@ -122,7 +119,7 @@
             <h3 class="formula-title">建構目標</h3>
             <div class="fraction-builder">
                 <div class="func-label" id="ratio-label">\(\sin\theta\)</div>
-                <div style="font-size: 5vh; color: var(--light); font-weight:bold; margin: 0 1vw;">=</div>
+                <div style="font-size: 5rem; color: var(--light); font-weight:bold; margin: 0 10px;">=</div>
                 <div class="fraction-visual">
                     <div class="slot" id="numerator-slot">分子</div>
                     <div class="frac-line"></div>
@@ -161,7 +158,6 @@
     let ctx, canvas, pCtx, pCanvas, rCtx, rCanvas;
     let isHardMode = false;
     let flashEdge = null; 
-    let uiScale = 1;
 
     let isDragging = false;
     let drawStartX = 0, drawStartY = 0;
@@ -197,13 +193,13 @@
         canvas.width = pane.clientWidth; canvas.height = pane.clientHeight;
         pCanvas.width = pane.clientWidth; pCanvas.height = pane.clientHeight;
         rCanvas.width = pane.clientWidth; rCanvas.height = pane.clientHeight;
-        
-        uiScale = Math.min(canvas.width / 1280, canvas.height / 1080);
-        
         if(gameState === "SELECTION_PHASE" || gameState === "DRAWING_PHASE") drawGeometry();
     }
 
     function startGame() {
+        // --- 啟動時強制 33% 縮放 ---
+        document.body.style.zoom = "0.33";
+
         const nameInput = document.getElementById('player-name').value.trim();
         currentPlayer = nameInput !== "" ? nameInput : "神祕挑戰者";
         document.getElementById('player-display').innerText = `玩家: ${currentPlayer}`;
@@ -211,11 +207,13 @@
         document.getElementById("start-screen").classList.add("hidden");
         score = 0; combo = 0; wrongCombo = 0; timeLeft = 30.0;
         
-        nextMission(); 
-        adaptCanvas(); 
-        requestAnimationFrame(animateParticles);
-        requestAnimationFrame(animateRipples);
-        updateUI();
+        setTimeout(() => {
+            nextMission(); 
+            adaptCanvas(); 
+            requestAnimationFrame(animateParticles);
+            requestAnimationFrame(animateRipples);
+            updateUI();
+        }, 50);
 
         clearInterval(timerInterval);
         timerInterval = setInterval(() => {
@@ -235,8 +233,8 @@
         for (let i = 0; i < 60; i++) {
             particles.push({
                 x: x, y: y,
-                vx: (Math.random() - 0.5) * (35 * uiScale), vy: (Math.random() - 0.5) * (35 * uiScale) - (10 * uiScale),
-                radius: Math.random() * (10 * uiScale) + (4 * uiScale),
+                vx: (Math.random() - 0.5) * 35, vy: (Math.random() - 0.5) * 35 - 10,
+                radius: Math.random() * 10 + 4,
                 color: Math.random() > 0.3 ? '#10B981' : (Math.random() > 0.5 ? '#FACC15' : '#38BDF8'),
                 alpha: 1, decay: Math.random() * 0.02 + 0.015
             });
@@ -246,7 +244,7 @@
         pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
         for (let i = particles.length - 1; i >= 0; i--) {
             let p = particles[i];
-            p.x += p.vx; p.y += p.vy; p.vy += (0.8 * uiScale); p.alpha -= p.decay;
+            p.x += p.vx; p.y += p.vy; p.vy += 0.8; p.alpha -= p.decay;
             if (p.alpha <= 0) { particles.splice(i, 1); continue; }
             pCtx.globalAlpha = p.alpha; pCtx.fillStyle = p.color;
             pCtx.beginPath(); pCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); pCtx.fill();
@@ -260,9 +258,9 @@
         rCtx.clearRect(0, 0, rCanvas.width, rCanvas.height);
         for (let i = ripples.length - 1; i >= 0; i--) {
             let r = ripples[i];
-            r.radius += (8 * uiScale); r.alpha -= 0.03;
+            r.radius += 8; r.alpha -= 0.03;
             if (r.alpha <= 0) { ripples.splice(i, 1); continue; }
-            rCtx.globalAlpha = r.alpha; rCtx.strokeStyle = "#06B6D4"; rCtx.lineWidth = 4 * uiScale;
+            rCtx.globalAlpha = r.alpha; rCtx.strokeStyle = "#06B6D4"; rCtx.lineWidth = 4;
             rCtx.beginPath(); rCtx.arc(r.x, r.y, r.radius, 0, Math.PI * 2); rCtx.stroke();
         }
         rCtx.globalAlpha = 1;
@@ -297,8 +295,7 @@
 
         if(gameState === "DRAWING_PHASE") {
             const topVertex = ctx.renderData.pA; 
-            const tolerance = Math.max(80, canvas.width * 0.08); 
-            if (Math.hypot(pos.x - topVertex.x, pos.y - topVertex.y) < tolerance) { 
+            if (Math.hypot(pos.x - topVertex.x, pos.y - topVertex.y) < 150) { 
                 isDragging = true;
                 drawStartX = topVertex.x; drawStartY = topVertex.y;
                 mouseX = pos.x; mouseY = pos.y;
@@ -313,7 +310,7 @@
         mouseX = pos.x; mouseY = pos.y;
         
         drawGeometry(); 
-        ctx.strokeStyle = "#FACC15"; ctx.lineWidth = 12 * uiScale; ctx.setLineDash([15 * uiScale, 15 * uiScale]);
+        ctx.strokeStyle = "#FACC15"; ctx.lineWidth = 12; ctx.setLineDash([15, 15]);
         ctx.beginPath(); ctx.moveTo(drawStartX, drawStartY); ctx.lineTo(mouseX, mouseY); ctx.stroke();
         ctx.setLineDash([]);
     }
@@ -326,10 +323,8 @@
             document.getElementById('geometry-pane').releasePointerCapture(e.pointerId);
             
             const dragDistY = mouseY - drawStartY;
-            const targetFoot = ctx.renderData.pD;
-            const requiredDist = canvas.height * 0.05; 
-            
-            if (dragDistY > requiredDist) { 
+            if (dragDistY > 80) { 
+                const targetFoot = ctx.renderData.pD;
                 createExplosion(targetFoot.x, targetFoot.y);
                 showFloatingText("NICE LINE!", "#FACC15");
                 
@@ -346,7 +341,7 @@
         if(gameState === "SELECTION_PHASE") {
             const distMoved = Math.hypot(pos.x - pointerDownPos.x, pos.y - pointerDownPos.y);
             const timeElapsed = Date.now() - pointerDownTime;
-            if(distMoved < (30 * uiScale) && timeElapsed < 500) handleCanvasClick(pos);
+            if(distMoved < 30 && timeElapsed < 500) handleCanvasClick(pos);
         }
     }
 
@@ -362,7 +357,6 @@
 
         let bestEdge = null;
         let minScore = Infinity;
-        const tolerance = Math.max(80, canvas.width * 0.1); 
 
         edges.forEach(edge => {
             let dLine = distToSegment(pos, edge.p1, edge.p2);
@@ -370,7 +364,7 @@
             let dMid = Math.hypot(pos.x - mid.x, pos.y - mid.y);
             let score = dLine + dMid * 0.15; 
             
-            if (dLine < tolerance && score < minScore) { 
+            if (dLine < 150 && score < minScore) { 
                 minScore = score;
                 bestEdge = edge;
             }
@@ -383,10 +377,9 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const data = currentMission.vis;
         
-        const topPadding = canvas.height * 0.2; 
-        const sidePadding = canvas.width * 0.15;
+        const topPadding = 150; const sidePadding = 120;
         const drawW = canvas.width - sidePadding * 2;
-        const drawH = canvas.height - topPadding - (canvas.height * 0.1); 
+        const drawH = canvas.height - topPadding - 120; 
 
         const pts = [data.top.pt, data.foot.pt, data.ref.pt];
         if(data.other) pts.push(data.other.pt);
@@ -394,7 +387,7 @@
         const minX = Math.min(...pts.map(p => p[0])); const maxX = Math.max(...pts.map(p => p[0]));
         const minY = Math.min(...pts.map(p => p[1])); const maxY = Math.max(...pts.map(p => p[1]));
 
-        const scale = Math.min(drawW / (maxX - minX), drawH / (maxY - minY)) * 0.9;
+        const scale = Math.min(drawW / (maxX - minX), drawH / (maxY - minY)) * 0.85;
 
         const toScreen = (pt) => ({
             x: canvas.width/2 + (pt[0] - (minX+maxX)/2) * scale,
@@ -405,14 +398,13 @@
         const pOther = data.other ? toScreen(data.other.pt) : null;
 
         ctx.renderData = { pA, pD, pRef, scale }; 
-        const strokeW = Math.max(8, canvas.height * 0.012);
 
         ctx.fillStyle = "rgba(59, 130, 246, 0.04)"; 
         ctx.beginPath(); ctx.moveTo(pA.x, pA.y); ctx.lineTo(pRef.x, pRef.y); 
         if(pOther) ctx.lineTo(pOther.x, pOther.y); else ctx.lineTo(pD.x, pD.y);
         ctx.closePath(); ctx.fill();
 
-        ctx.strokeStyle = "rgba(148, 163, 184, 0.9)"; ctx.lineWidth = strokeW; ctx.lineCap = "round"; ctx.lineJoin = "round";
+        ctx.strokeStyle = "rgba(148, 163, 184, 0.9)"; ctx.lineWidth = 14; ctx.lineCap = "round"; ctx.lineJoin = "round";
         ctx.beginPath(); ctx.moveTo(pA.x, pA.y); ctx.lineTo(pRef.x, pRef.y); 
         if(pOther) ctx.lineTo(pOther.x, pOther.y); else ctx.lineTo(pD.x, pD.y);
         ctx.closePath(); ctx.stroke();
@@ -420,7 +412,7 @@
         if (currentMission.type === "hard") {
             const isObtuse = (data.ref.pt[0] * data.other.pt[0] > 0);
             if (isObtuse) {
-                ctx.strokeStyle = "rgba(148, 163, 184, 0.5)"; ctx.lineWidth = strokeW * 0.6; ctx.setLineDash([strokeW, strokeW]);
+                ctx.strokeStyle = "rgba(148, 163, 184, 0.5)"; ctx.lineWidth = 8; ctx.setLineDash([12, 12]);
                 ctx.beginPath(); ctx.moveTo(pD.x, pD.y); 
                 const innerPoint = Math.abs(data.ref.pt[0]) < Math.abs(data.other.pt[0]) ? pRef : pOther;
                 ctx.lineTo(innerPoint.x, innerPoint.y);
@@ -428,40 +420,38 @@
             }
 
             if (gameState === "DRAWING_PHASE") {
-                ctx.beginPath(); ctx.arc(pA.x, pA.y, canvas.height * 0.05, 0, Math.PI*2);
+                ctx.beginPath(); ctx.arc(pA.x, pA.y, 45, 0, Math.PI*2);
                 ctx.fillStyle = "rgba(250, 204, 21, 0.3)"; ctx.fill();
-                ctx.lineWidth = strokeW * 0.5; ctx.strokeStyle = "#FACC15"; ctx.stroke();
+                ctx.lineWidth = 6; ctx.strokeStyle = "#FACC15"; ctx.stroke();
             } else if (gameState === "SELECTION_PHASE") {
-                ctx.strokeStyle = "#10B981"; ctx.lineWidth = strokeW * 0.9; ctx.setLineDash([strokeW*1.5, strokeW*1.5]);
+                ctx.strokeStyle = "#10B981"; ctx.lineWidth = 12; ctx.setLineDash([15, 15]);
                 ctx.beginPath(); ctx.moveTo(pA.x, pA.y); ctx.lineTo(pD.x, pD.y); ctx.stroke();
                 ctx.setLineDash([]);
-                drawRightAngle(ctx, pD, pRef, pA, canvas.height * 0.05);
+                drawRightAngle(ctx, pD, pRef, pA, 45);
             }
         } else if (currentMission.type === "easy" && gameState === "SELECTION_PHASE") {
-            drawRightAngle(ctx, pD, pRef, pA, canvas.height * 0.05);
+            drawRightAngle(ctx, pD, pRef, pA, 45);
         }
 
         if (gameState === "SELECTION_PHASE") {
             const refColorRgb = varToRgb("--accent");
-            ctx.strokeStyle = `rgba(${refColorRgb}, 1)`; ctx.fillStyle = `rgba(${refColorRgb}, 0.2)`; ctx.lineWidth = strokeW * 0.7;
-            const arcR = canvas.height * 0.08;
+            ctx.strokeStyle = `rgba(${refColorRgb}, 1)`; ctx.fillStyle = `rgba(${refColorRgb}, 0.2)`; ctx.lineWidth = 10;
+            const arcR = 90;
             const angA = Math.atan2(pA.y - pRef.y, pA.x - pRef.x);
             const angD = Math.atan2(pD.y - pRef.y, pD.x - pRef.x);
             ctx.beginPath(); ctx.moveTo(pRef.x, pRef.y); ctx.arc(pRef.x, pRef.y, arcR, Math.min(angA, angD), Math.max(angA, angD)); ctx.closePath(); ctx.fill(); ctx.stroke();
         }
 
-        const labelOffset = canvas.height * 0.05;
-        drawVertexLabel(ctx, pA, data.top.name, 0, -labelOffset, "148, 163, 184");
-        drawVertexLabel(ctx, pRef, data.ref.name, 0, labelOffset, "148, 163, 184");
-        if(pOther) drawVertexLabel(ctx, pOther, data.other.name, 0, labelOffset, "148, 163, 184");
-        
+        drawVertexLabel(ctx, pA, data.top.name, 0, -45, "148, 163, 184");
+        drawVertexLabel(ctx, pRef, data.ref.name, 0, 45, "148, 163, 184");
+        if(pOther) drawVertexLabel(ctx, pOther, data.other.name, 0, 45, "148, 163, 184");
         if(gameState === "SELECTION_PHASE") {
-            if(currentMission.type === "hard") drawVertexLabel(ctx, pD, "D", 0, labelOffset*1.2, varToRgb("--success"));
+            if(currentMission.type === "hard") drawVertexLabel(ctx, pD, "D", 0, 50, varToRgb("--success"));
             drawEdgeLabel(ctx, pA, pD, currentMission.data.opp);
             drawEdgeLabel(ctx, pD, pRef, currentMission.data.adj);
             drawEdgeLabel(ctx, pA, pRef, currentMission.data.hyp);
         } else if (currentMission.type === "easy") {
-            drawVertexLabel(ctx, pD, data.foot.name, 0, labelOffset, "148, 163, 184");
+            drawVertexLabel(ctx, pD, data.foot.name, 0, 45, "148, 163, 184");
         }
 
         if(flashEdge) {
@@ -470,8 +460,8 @@
             else if(flashEdge.id === "adj") { p1 = pD; p2 = pRef; }
             else { p1 = pA; p2 = pRef; }
             
-            ctx.strokeStyle = flashEdge.color; ctx.lineWidth = strokeW * 1.8;
-            ctx.shadowColor = flashEdge.color; ctx.shadowBlur = strokeW * 2;
+            ctx.strokeStyle = flashEdge.color; ctx.lineWidth = 20;
+            ctx.shadowColor = flashEdge.color; ctx.shadowBlur = 30;
             ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
             ctx.shadowBlur = 0; 
             
@@ -483,25 +473,21 @@
     function drawRightAngle(ctx, vertex, p1, p2, size) {
         const dx1 = Math.sign(p1.x - vertex.x) * size || 0, dy1 = Math.sign(p1.y - vertex.y) * size || 0;
         const dx2 = Math.sign(p2.x - vertex.x) * size || 0, dy2 = Math.sign(p2.y - vertex.y) * size || 0;
-        ctx.strokeStyle = "rgba(148, 163, 184, 0.7)"; ctx.lineWidth = size * 0.15;
+        ctx.strokeStyle = "rgba(148, 163, 184, 0.7)"; ctx.lineWidth = 6;
         ctx.beginPath(); ctx.moveTo(vertex.x + dx1, vertex.y + dy1); ctx.lineTo(vertex.x + dx1 + dx2, vertex.y + dy1 + dy2); ctx.lineTo(vertex.x + dx2, vertex.y + dy2); ctx.stroke();
     }
 
     function drawVertexLabel(ctx, p, text, offX, offY, colorRgb) {
-        const fontSize = Math.max(20, canvas.height * 0.05);
-        ctx.fillStyle = `rgba(${colorRgb}, 1)`; ctx.font = `bold ${fontSize}px sans-serif`; ctx.textAlign="center"; ctx.textBaseline="middle";
+        ctx.fillStyle = `rgba(${colorRgb}, 1)`; ctx.font = "bold 55px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
         ctx.fillText(text, p.x + offX, p.y + offY);
     }
     
     function drawEdgeLabel(ctx, p1, p2, text) {
         const mx = (p1.x + p2.x)/2; const my = (p1.y + p2.y)/2;
-        const fontSize = Math.max(16, canvas.height * 0.04);
-        ctx.font = `bold ${fontSize}px 'Segoe UI'`;
+        ctx.font = "bold 40px 'Segoe UI'";
         const w = ctx.measureText(text).width;
-        const padX = fontSize * 0.4; const padY = fontSize * 0.7;
-        
         ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
-        ctx.beginPath(); ctx.roundRect(mx - w/2 - padX, my - padY, w + padX*2, padY*2, padY*0.3); ctx.fill();
+        ctx.beginPath(); ctx.roundRect(mx - w/2 - 15, my - 30, w + 30, 60, 10); ctx.fill();
         ctx.fillStyle = "#F8FAFC"; ctx.textAlign="center"; ctx.textBaseline="middle";
         ctx.fillText(text, mx, my);
     }
@@ -572,7 +558,20 @@
         }
         
         drawGeometry();
-        if (typeof MathJax !== 'undefined' && MathJax.typesetPromise) MathJax.typesetPromise(); 
+        
+        // 核心修復：強制清除 MathJax 快取以防非同步卡死
+        try {
+            if (typeof MathJax !== 'undefined') {
+                if (MathJax.typesetClear) MathJax.typesetClear();
+                if (MathJax.typesetPromise) {
+                    MathJax.typesetPromise().catch(err => console.warn(err));
+                } else {
+                    MathJax.typeset();
+                }
+            }
+        } catch (error) {
+            console.warn("MathJax 渲染遇到小錯誤，但不影響遊戲進行。", error);
+        }
     }
 
     function handleEdgeSelection(edgeType) {
@@ -634,10 +633,13 @@
         clearInterval(timerInterval);
         gameState = "GAMEOVER";
         
+        // 核心修復：結算時強制解除縮放，恢復 100% 比例展現英雄榜
+        document.body.style.zoom = "1";
+        
         const board = saveAndGetLeaderboard();
         
         let boardHTML = `<div class="leaderboard-box">
-            <h2 style="color: var(--accent); font-size: 4vh; margin-top: 0; margin-bottom: 2vh; text-shadow: 0 0 2vh var(--accent);">🏆 榮譽殿堂 🏆</h2>
+            <h2 style="color: var(--accent); font-size: 4rem; margin-top: 0; margin-bottom: 20px; text-shadow: 0 0 20px var(--accent);">🏆 榮譽殿堂 🏆</h2>
             <table class="leaderboard-table">
                 <tr><th>排名</th><th>玩家</th><th>分數</th></tr>`;
         
@@ -653,8 +655,8 @@
         const endScreen = document.createElement('div');
         endScreen.className = "overlay";
         endScreen.innerHTML = `
-            <h1 style="font-size: 8vh; margin-bottom: 1vh; color: #FACC15; text-shadow: 0 0 5vh rgba(250,204,21,0.6);">TIME UP!</h1>
-            <div style="font-size: 4vh; margin: 1vh 0 3vh 0;">最終得分：${score}</div>
+            <h1 style="font-size: 8rem; margin-bottom: 10px; color: #FACC15; text-shadow: 0 0 50px rgba(250,204,21,0.6);">TIME UP!</h1>
+            <div style="font-size: 4rem; margin: 10px 0 30px 0;">最終得分：${score}</div>
             ${boardHTML}
             <button class="mega-btn" onclick="location.reload()">重新挑戰</button>
         `;
