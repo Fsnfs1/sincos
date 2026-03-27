@@ -81,6 +81,10 @@
 
         .ritual-text { position: absolute; font-size: 7rem; font-weight: bold; font-style: italic; opacity: 0; z-index: 50; text-shadow: 0 0 30px rgba(0,0,0,0.9); pointer-events: none; }
         @keyframes flyUp { 0% { opacity: 1; transform: translateY(40px) scale(0.5); } 20% { opacity: 1; transform: translateY(0) scale(1.2); } 80% { opacity: 1; transform: translateY(-100px) scale(1); } 100% { opacity: 0; transform: translateY(-150px) scale(0.8); } }
+        
+        /* 全屏切换按钮样式 */
+        .fullscreen-btn { position: fixed; top: 20px; right: 20px; background: rgba(15, 23, 42, 0.8); border: 2px solid #475569; color: var(--light); padding: 12px 24px; border-radius: 12px; cursor: pointer; font-size: 1.8rem; font-weight: bold; z-index: 1000; transition: all 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .fullscreen-btn:hover { border-color: var(--accent); color: var(--accent); transform: scale(1.05); }
     </style>
 </head>
 <body>
@@ -131,6 +135,8 @@
         </div>
     </div>
 </div>
+
+<button id="fullscreen-toggle" class="fullscreen-btn hidden" onclick="toggleFullScreen()">退出全屏 ⛶</button>
 
 <script>
     const easyMissions = [
@@ -183,6 +189,50 @@
         }
     }
 
+    // 全屏核心逻辑
+    function enterFullScreen() {
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen().catch(err => console.warn("Fullscreen API Error:", err));
+        } else if (elem.webkitRequestFullscreen) { /* Safari */
+            elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) { /* IE11 */
+            elem.msRequestFullscreen();
+        }
+    }
+
+    function exitFullScreen() {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) { /* Safari */
+            document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) { /* IE11 */
+            document.msExitFullscreen();
+        }
+    }
+
+    function toggleFullScreen() {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+            enterFullScreen();
+        } else {
+            exitFullScreen();
+        }
+    }
+
+    // 监听全屏状态变更，更新按钮文本
+    function handleFullscreenChange() {
+        const btn = document.getElementById('fullscreen-toggle');
+        if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+            btn.innerText = "进入全屏 ⛶";
+        } else {
+            btn.innerText = "退出全屏 ⛶";
+        }
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('msfullscreenchange', handleFullscreenChange);
+
     window.onload = () => {
         setGameScale(0.33);
 
@@ -216,6 +266,10 @@
     }
 
     function startGame() {
+        // 触发全屏并显示控制按钮
+        enterFullScreen();
+        document.getElementById('fullscreen-toggle').classList.remove('hidden');
+
         const nameInput = document.getElementById('player-name').value.trim();
         currentPlayer = nameInput !== "" ? nameInput : "神秘挑战者";
         document.getElementById('player-display').innerText = `玩家: ${currentPlayer}`;
