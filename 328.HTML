@@ -12,9 +12,14 @@
             --dark: #030712; --light: #F8FAFC; --accent: #FACC15;
             --glowing-cyan: #06B6D4;
         }
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background-color: var(--dark); color: var(--light); overflow: hidden; user-select: none; touch-action: none; transition: zoom 0.3s ease-out; }
         
-        .game-wrapper { display: flex; width: 100vw; height: 100vh; overflow: hidden; }
+        /* 核心修复 1: 确保 html 和 body 100% 且使用平滑的 transform 过渡 */
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
+        html { transition: transform 0.3s ease-out; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--dark); color: var(--light); user-select: none; touch-action: none; }
+        
+        /* 核心修复 2: vw/vh 改为 100%，以兼容动态 scale 视口 */
+        .game-wrapper { display: flex; width: 100%; height: 100%; overflow: hidden; }
 
         .geometry-pane { position: relative; flex: 2; height: 100%; border-right: 4px solid #334155; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box; cursor: crosshair;}
         
@@ -60,7 +65,7 @@
         .main-error { animation: bgShake 0.35s ease-in-out both; border-right: 15px solid var(--danger) !important; box-shadow: inset 0 0 250px rgba(239,68,68,0.7) !important; }
         .main-success { border-right: 15px solid var(--success); box-shadow: inset 0 0 150px rgba(16,185,129,0.3); transition: all 0.3s; }
 
-        .overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(7, 11, 20, 0.99); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(15px); }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(7, 11, 20, 0.99); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(15px); }
         .hidden { display: none !important; }
         
         .player-input { font-size: 2.5rem; padding: 20px 40px; border-radius: 20px; border: 4px solid #475569; background: rgba(15,23,42,0.8); color: var(--light); text-align: center; margin-top: 40px; width: 500px; outline: none; }
@@ -165,6 +170,22 @@
     let pointerDownPos = {x:0, y:0};
     let ripples = [];
 
+    // 核心修复: 标准比例缩放器，杜绝使用致死 bug 的 CSS zoom
+    function setGameScale(targetScale) {
+        const root = document.documentElement;
+        if (targetScale === 1) {
+            root.style.transform = "none";
+            root.style.width = "100%";
+            root.style.height = "100%";
+        } else {
+            const invScale = 100 / targetScale;
+            root.style.transform = `scale(${targetScale})`;
+            root.style.transformOrigin = "top left";
+            root.style.width = `${invScale}vw`;
+            root.style.height = `${invScale}vh`;
+        }
+    }
+
     window.onload = () => {
         canvas = document.getElementById('main-canvas'); ctx = canvas.getContext('2d');
         pCanvas = document.getElementById('particle-canvas'); pCtx = pCanvas.getContext('2d');
@@ -196,7 +217,7 @@
     }
 
     function startGame() {
-        document.body.style.zoom = "0.33"; // 强制 33% 缩放
+        setGameScale(0.33); // 调用底层重构的安全缩放逻辑
 
         const nameInput = document.getElementById('player-name').value.trim();
         currentPlayer = nameInput !== "" ? nameInput : "神秘挑战者";
@@ -238,6 +259,7 @@
             });
         }
     }
+    let particles = [];
     function animateParticles() {
         pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
         for (let i = particles.length - 1; i >= 0; i--) {
@@ -268,6 +290,7 @@
     function getCanvasCoords(clientX, clientY) {
         if(clientX === undefined || clientY === undefined) return {x: 0, y: 0};
         const rect = canvas.getBoundingClientRect();
+        // 在新 transform 架构下，此比率自然消除了坐标畸变
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
         return { 
@@ -297,7 +320,8 @@
                 isDragging = true;
                 drawStartX = topVertex.x; drawStartY = topVertex.y;
                 mouseX = pos.x; mouseY = pos.y;
-                document.getElementById('geometry-pane').setPointerCapture(e.pointerId);
+                // 核心修复: 添加异常捕获防挂断
+                try { document.getElementById('geometry-pane').setPointerCapture(e.pointerId); } catch(err){}
             }
         }
     }
@@ -318,7 +342,8 @@
 
         if(isDragging) {
             isDragging = false;
-            document.getElementById('geometry-pane').releasePointerCapture(e.pointerId);
+            // 核心修复: 确保安全释放指针避免报错阻滞
+            try { document.getElementById('geometry-pane').releasePointerCapture(e.pointerId); } catch(err){}
             
             const dragDistY = mouseY - drawStartY;
             if (dragDistY > 80) { 
@@ -518,11 +543,16 @@
         geometryPane.classList.add("main-error");
         setTimeout(() => geometryPane.classList.remove("main-error"), 400);
         
-        if(gameState === "DRAWING_PHASE") setTimeout(nextMission, 500); 
+        if(gameState === "DRAWING_PHASE") {
+            setTimeout(() => {
+                if (gameState !== "GAMEOVER") nextMission(); // 阻断状态竞争
+            }, 500); 
+        }
     }
 
-    // 核心修复：添加防卡死保护，重置所有隐存状态，强迫清理 MathJax 缓存
     function nextMission() {
+        if (gameState === "GAMEOVER") return; // 绝对阻隔僵尸状态推进
+
         try {
             if (combo >= 3 && !isHardMode) {
                 isHardMode = true;
@@ -538,7 +568,6 @@
             currentMission = pool[newIdx];
             currentMission.id = newIdx; 
             
-            // 彻底清空上一局的状态残留
             numFilled = false;
             denFilled = false;
             flashEdge = null;
@@ -561,7 +590,6 @@
             updateInstruction();
             drawGeometry();
             
-            // 防御性清空缓存与非同步宣染调用
             if (window.MathJax && window.MathJax.typesetClear) {
                 window.MathJax.typesetClear();
                 if (window.MathJax.typesetPromise) {
@@ -608,7 +636,7 @@
                 updateUI();
                 setTimeout(() => {
                     document.getElementById("geometry-pane").classList.remove("main-success");
-                    nextMission();
+                    if (gameState !== "GAMEOVER") nextMission(); // 阻滞状态竞争
                 }, 700);
             } else {
                 updateInstruction();
@@ -634,7 +662,7 @@
         clearInterval(timerInterval);
         gameState = "GAMEOVER";
         
-        document.body.style.zoom = "1"; // 恢复 100% 缩放
+        setGameScale(1); // 恢复 100% 安全结构尺寸
         
         const board = saveAndGetLeaderboard();
         
