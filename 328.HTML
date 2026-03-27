@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>三角比建構者 - 虛擬畫布滿版自適應</title>
+    <title>三角比建构者 - 自由解构与防卡死稳定版</title>
     <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
@@ -12,21 +12,9 @@
             --dark: #030712; --light: #F8FAFC; --accent: #FACC15;
             --glowing-cyan: #06B6D4;
         }
-        /* 頁面本體滿版並置中對齊 */
-        body { font-family: 'Segoe UI', sans-serif; margin: 0; background-color: var(--dark); color: var(--light); overflow: hidden; user-select: none; touch-action: none; display: flex; justify-content: center; align-items: center; width: 100vw; height: 100vh; }
+        body { font-family: 'Segoe UI', sans-serif; margin: 0; background-color: var(--dark); color: var(--light); overflow: hidden; user-select: none; touch-action: none; transition: zoom 0.3s ease-out; }
         
-        /* 核心升級：鎖定解析度 1920x1080，統一等比縮放 */
-        #app-scale-wrapper {
-            position: relative;
-            width: 1920px;
-            height: 1080px;
-            transform-origin: center center;
-            overflow: hidden;
-            background: var(--dark);
-            box-shadow: 0 0 50px rgba(0,0,0,1);
-        }
-
-        .game-wrapper { display: flex; width: 100%; height: 100%; overflow: hidden; }
+        .game-wrapper { display: flex; width: 100vw; height: 100vh; overflow: hidden; }
 
         .geometry-pane { position: relative; flex: 2; height: 100%; border-right: 4px solid #334155; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box; cursor: crosshair;}
         
@@ -34,9 +22,9 @@
         #particle-canvas { z-index: 2; pointer-events: none; }
         #ripple-canvas { z-index: 3; pointer-events: none; }
 
-        .q-floating-header { position: absolute; top: 40px; left: 0; width: 100%; z-index: 10; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
+        .q-floating-header { position: absolute; top: 30px; left: 0; width: 100%; z-index: 10; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
         .question-stem { font-size: 3.5rem; font-weight: bold; background: rgba(3, 7, 18, 0.9); padding: 18px 55px; border-radius: 20px; border: 3px solid #475569; box-shadow: 0 12px 35px rgba(0,0,0,0.6); text-shadow: 0 0 15px var(--light); }
-        .instruction-text { font-size: 2.2rem; color: var(--accent); margin-top: 15px; font-weight: bold; text-shadow: 0 0 10px rgba(250,204,21,0.5); padding: 8px 25px; background: rgba(0,0,0,0.6); border-radius: 12px;}
+        .instruction-text { font-size: 2.2rem; color: var(--accent); margin-top: 15px; font-weight: bold; text-shadow: 0 0 10px rgba(250,204,21,0.5); padding: 5px 25px; background: rgba(0,0,0,0.6); border-radius: 12px;}
 
         .level-up-banner { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0.5); font-size: 5rem; font-weight: bold; color: var(--accent); text-shadow: 0 0 40px var(--accent); z-index: 50; opacity: 0; pointer-events: none; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); background: rgba(0,0,0,0.8); padding: 20px 40px; border-radius: 20px; border: 4px solid var(--accent); white-space: nowrap;}
         .level-up-banner.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
@@ -72,8 +60,7 @@
         .main-error { animation: bgShake 0.35s ease-in-out both; border-right: 15px solid var(--danger) !important; box-shadow: inset 0 0 250px rgba(239,68,68,0.7) !important; }
         .main-success { border-right: 15px solid var(--success); box-shadow: inset 0 0 150px rgba(16,185,129,0.3); transition: all 0.3s; }
 
-        /* 覆蓋層改為絕對定位，以適應 1920x1080 容器 */
-        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(7, 11, 20, 0.99); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(15px); }
+        .overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(7, 11, 20, 0.99); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(15px); }
         .hidden { display: none !important; }
         
         .player-input { font-size: 2.5rem; padding: 20px 40px; border-radius: 20px; border: 4px solid #475569; background: rgba(15,23,42,0.8); color: var(--light); text-align: center; margin-top: 40px; width: 500px; outline: none; }
@@ -95,49 +82,47 @@
 </head>
 <body>
 
-<div id="app-scale-wrapper">
-    <div id="start-screen" class="overlay">
-        <h1 style="font-size: 7rem; margin-bottom: 0; text-shadow: 0 0 50px var(--glowing-cyan); color: var(--glowing-cyan);">⚔️ 三角比建構者 ⚔️</h1>
-        <p style="font-size: 2.5rem; color: #94A3B8; margin-top: 10px; font-weight: bold;">原生滿版自適應 ＆ 觸控防誤判版</p>
-        
-        <input type="text" id="player-name" class="player-input" placeholder="輸入玩家代號..." autocomplete="off" maxlength="12">
-        <button class="mega-btn" onclick="startGame()">接受挑戰</button>
+<div id="start-screen" class="overlay">
+    <h1 style="font-size: 7rem; margin-bottom: 0; text-shadow: 0 0 50px var(--glowing-cyan); color: var(--glowing-cyan);">⚔️ 三角比建构者 ⚔️</h1>
+    <p style="font-size: 2.5rem; color: #94A3B8; margin-top: 10px; font-weight: bold;">30秒生存 ＆ 自由解构版</p>
+    
+    <input type="text" id="player-name" class="player-input" placeholder="输入玩家代号..." autocomplete="off" maxlength="12">
+    <button class="mega-btn" onclick="startGame()">接受挑战</button>
+</div>
+
+<div class="game-wrapper" id="main-wrapper">
+    <div class="geometry-pane" id="geometry-pane">
+        <canvas id="particle-canvas"></canvas>
+        <canvas id="ripple-canvas"></canvas>
+        <div class="q-floating-header">
+            <div class="question-stem" id="question-text">载入中...</div>
+            <div class="instruction-text" id="instruction">准备中...</div>
+        </div>
+        <div class="level-up-banner" id="level-up-banner">🚀 难度升级：向下滑动画出高线！</div>
+        <div class="viz-layer">
+            <canvas id="main-canvas"></canvas>
+        </div>
     </div>
 
-    <div class="game-wrapper" id="main-wrapper">
-        <div class="geometry-pane" id="geometry-pane">
-            <canvas id="particle-canvas"></canvas>
-            <canvas id="ripple-canvas"></canvas>
-            <div class="q-floating-header">
-                <div class="question-stem" id="question-text">載入中...</div>
-                <div class="instruction-text" id="instruction">準備中...</div>
-            </div>
-            <div class="level-up-banner" id="level-up-banner">🚀 難度升級：向下滑動畫出高線！</div>
-            <div class="viz-layer">
-                <canvas id="main-canvas"></canvas>
-            </div>
+    <div class="info-pane">
+        <div class="info-card">
+            <div class="player-info" id="player-display">玩家: 挑战者</div>
+            <div class="timer-box" id="timer-display">30.0</div>
+            <div style="height: 2px; background: #334155; margin: 15px 0;"></div>
+            <div class="score-box">分数: <span id="score-display">0</span></div>
+            <div class="combo-box" id="combo-display">x1 Combo!</div>
+            <div class="penalty-box" id="penalty-display" style="opacity: 0;">连错惩罚: -100</div>
         </div>
 
-        <div class="info-pane">
-            <div class="info-card">
-                <div class="player-info" id="player-display">玩家: 挑戰者</div>
-                <div class="timer-box" id="timer-display">30.0</div>
-                <div style="height: 2px; background: #334155; margin: 15px 0;"></div>
-                <div class="score-box">分數: <span id="score-display">0</span></div>
-                <div class="combo-box" id="combo-display">x1 Combo!</div>
-                <div class="penalty-box" id="penalty-display" style="opacity: 0;">連錯懲罰: -100</div>
-            </div>
-
-            <div class="formula-zone" id="formula-zone">
-                <h3 class="formula-title">建構目標</h3>
-                <div class="fraction-builder">
-                    <div class="func-label" id="ratio-label">\(\sin\theta\)</div>
-                    <div style="font-size: 5rem; color: var(--light); font-weight:bold; margin: 0 10px;">=</div>
-                    <div class="fraction-visual">
-                        <div class="slot" id="numerator-slot">分子</div>
-                        <div class="frac-line"></div>
-                        <div class="slot" id="denominator-slot">分母</div>
-                    </div>
+        <div class="formula-zone" id="formula-zone">
+            <h3 class="formula-title">建构目标</h3>
+            <div class="fraction-builder">
+                <div class="func-label" id="ratio-label">\(\sin\theta\)</div>
+                <div style="font-size: 5rem; color: var(--light); font-weight:bold; margin: 0 10px;">=</div>
+                <div class="fraction-visual">
+                    <div class="slot" id="numerator-slot">分子</div>
+                    <div class="frac-line"></div>
+                    <div class="slot" id="denominator-slot">分母</div>
                 </div>
             </div>
         </div>
@@ -158,20 +143,26 @@
         { type: "hard", vis: {top:{pt:[0, 8], name:"A"}, foot:{pt:[0, 0], name:"D"}, ref:{pt:[-15, 0], name:"B"}, other:{pt:[-6, 0], name:"C"}}, ratioMath: "\\sin B", steps: {num:"opp", den:"hyp"}, data: {opp:"8", adj:"15", hyp:"17"} }
     ];
 
-    const stepNames = { "opp": "對邊", "adj": "鄰邊", "hyp": "斜邊" };
+    const stepNames = { "opp": "对边", "adj": "邻边", "hyp": "斜边" };
 
     let gameState = "MENU"; 
-    let currentPlayer = "神祕挑戰者";
+    let currentPlayer = "神秘挑战者";
     let score = 0; let combo = 0; let wrongCombo = 0;
     let timeLeft = 30.0; let timerInterval;
     let currentMission = null; 
-    let numFilled = false; let denFilled = false;
+    
+    let numFilled = false;
+    let denFilled = false;
 
     let ctx, canvas, pCtx, pCanvas, rCtx, rCanvas;
-    let isHardMode = false; let flashEdge = null; 
+    let isHardMode = false;
+    let flashEdge = null; 
 
-    let isDragging = false; let drawStartX = 0, drawStartY = 0;
-    let mouseX = 0, mouseY = 0; let pointerDownTime = 0; let pointerDownPos = {x:0, y:0};
+    let isDragging = false;
+    let drawStartX = 0, drawStartY = 0;
+    let mouseX = 0, mouseY = 0;
+    let pointerDownTime = 0;
+    let pointerDownPos = {x:0, y:0};
     let ripples = [];
 
     window.onload = () => {
@@ -186,6 +177,7 @@
         pane.addEventListener('pointerdown', onPointerDown);
         pane.addEventListener('pointermove', onPointerMove);
         window.addEventListener('pointerup', onPointerUp);
+        
         pane.addEventListener('touchstart', (e) => { e.preventDefault(); }, {passive: false});
         pane.addEventListener('touchmove', (e) => { e.preventDefault(); }, {passive: false});
 
@@ -194,37 +186,32 @@
         });
     };
 
-    // 核心修復：使用 transform 等比縮放適應螢幕
     function adaptCanvas() {
-        const wrapper = document.getElementById('app-scale-wrapper');
-        // 計算 1920x1080 到當前視窗的最佳縮放比
-        const scale = Math.min(window.innerWidth / 1920, window.innerHeight / 1080);
-        wrapper.style.transform = `scale(${scale})`;
-
         const pane = document.getElementById('geometry-pane');
         if(!pane) return;
-        
-        // 內部畫布解析度固定依賴於已縮放的 1920x1080 網格
         canvas.width = pane.clientWidth; canvas.height = pane.clientHeight;
         pCanvas.width = pane.clientWidth; pCanvas.height = pane.clientHeight;
         rCanvas.width = pane.clientWidth; rCanvas.height = pane.clientHeight;
-        
         if(gameState === "SELECTION_PHASE" || gameState === "DRAWING_PHASE") drawGeometry();
     }
 
     function startGame() {
+        document.body.style.zoom = "0.33"; // 强制 33% 缩放
+
         const nameInput = document.getElementById('player-name').value.trim();
-        currentPlayer = nameInput !== "" ? nameInput : "神祕挑戰者";
+        currentPlayer = nameInput !== "" ? nameInput : "神秘挑战者";
         document.getElementById('player-display').innerText = `玩家: ${currentPlayer}`;
 
         document.getElementById("start-screen").classList.add("hidden");
         score = 0; combo = 0; wrongCombo = 0; timeLeft = 30.0;
         
-        nextMission(); 
-        adaptCanvas(); 
-        requestAnimationFrame(animateParticles);
-        requestAnimationFrame(animateRipples);
-        updateUI();
+        setTimeout(() => {
+            nextMission(); 
+            adaptCanvas(); 
+            requestAnimationFrame(animateParticles);
+            requestAnimationFrame(animateRipples);
+            updateUI();
+        }, 50);
 
         clearInterval(timerInterval);
         timerInterval = setInterval(() => {
@@ -278,12 +265,9 @@
         requestAnimationFrame(animateRipples);
     }
 
-    // 核心修復：計算矩陣校準，抵銷 transform: scale 的影響
     function getCanvasCoords(clientX, clientY) {
         if(clientX === undefined || clientY === undefined) return {x: 0, y: 0};
         const rect = canvas.getBoundingClientRect();
-        // 由於父層被等比縮放，getBoundingClientRect 會返回縮放後的尺寸
-        // 因此直接除以縮放比，就能還原到 Canvas 內部的絕對 1920x1080 座標系
         const scaleX = canvas.width / rect.width;
         const scaleY = canvas.height / rect.height;
         return { 
@@ -362,6 +346,7 @@
     function handleCanvasClick(pos) {
         if(!ctx.renderData) return;
         const {pA, pD, pRef} = ctx.renderData;
+
         const edges = [
             { id: "opp", p1: pA, p2: pD },
             { id: "adj", p1: pD, p2: pRef },
@@ -376,6 +361,7 @@
             let mid = { x: (edge.p1.x+edge.p2.x)/2, y: (edge.p1.y+edge.p2.y)/2 };
             let dMid = Math.hypot(pos.x - mid.x, pos.y - mid.y);
             let score = dLine + dMid * 0.15; 
+            
             if (dLine < 150 && score < minScore) { 
                 minScore = score;
                 bestEdge = edge;
@@ -513,7 +499,7 @@
         const penaltyEl = document.getElementById("penalty-display");
         if(wrongCombo > 0) {
             let pVal = 100 * Math.pow(2, wrongCombo - 1);
-            penaltyEl.innerText = `連錯懲罰: -${pVal}`;
+            penaltyEl.innerText = `连错惩罚: -${pVal}`;
             penaltyEl.classList.add("show");
             penaltyEl.style.color = "var(--danger)";
         } else {
@@ -523,6 +509,7 @@
 
     function handlePenalty() {
         wrongCombo++; combo = 0; isHardMode = false; 
+        
         let penalty = 100 * Math.pow(2, wrongCombo - 1);
         score = Math.max(0, score - penalty);
         updateUI();
@@ -534,60 +521,78 @@
         if(gameState === "DRAWING_PHASE") setTimeout(nextMission, 500); 
     }
 
+    // 核心修复：添加防卡死保护，重置所有隐存状态，强迫清理 MathJax 缓存
     function nextMission() {
-        if (combo >= 3 && !isHardMode) {
-            isHardMode = true;
-            document.getElementById("level-up-banner").classList.add("show");
-            setTimeout(()=> document.getElementById("level-up-banner").classList.remove("show"), 1500);
-        }
-
-        let pool = isHardMode ? hardMissions : easyMissions;
-        let prevId = currentMission ? currentMission.id : -1;
-        let newIdx;
-        do { newIdx = Math.floor(Math.random() * pool.length); } while (newIdx === prevId && pool.length > 1);
-        
-        currentMission = pool[newIdx];
-        currentMission.id = newIdx; 
-        numFilled = false; denFilled = false;
-
-        document.getElementById("question-text").innerHTML = `在 \\(\\triangle ABC\\) 中，求 \\(${currentMission.ratioMath}\\)`;
-        document.getElementById("ratio-label").innerHTML = `\\(${currentMission.ratioMath}\\)`;
-        
-        resetSlot("numerator-slot", "分子");
-        resetSlot("denominator-slot", "分母");
-
-        if (isHardMode) {
-            gameState = "DRAWING_PHASE";
-            document.getElementById("formula-zone").classList.add("locked");
-            updateInstruction();
-        } else {
-            gameState = "SELECTION_PHASE";
-            document.getElementById("formula-zone").classList.remove("locked");
-            updateInstruction();
-        }
-        
-        drawGeometry();
-        
         try {
-            if (typeof MathJax !== 'undefined') {
-                if (MathJax.typesetClear) MathJax.typesetClear();
-                if (MathJax.typesetPromise) { MathJax.typesetPromise().catch(err => console.warn(err)); } 
-                else { MathJax.typeset(); }
+            if (combo >= 3 && !isHardMode) {
+                isHardMode = true;
+                document.getElementById("level-up-banner").classList.add("show");
+                setTimeout(()=> document.getElementById("level-up-banner").classList.remove("show"), 1500);
             }
-        } catch (error) {}
+
+            let pool = isHardMode ? hardMissions : easyMissions;
+            let prevId = currentMission ? currentMission.id : -1;
+            let newIdx;
+            do { newIdx = Math.floor(Math.random() * pool.length); } while (newIdx === prevId && pool.length > 1);
+            
+            currentMission = pool[newIdx];
+            currentMission.id = newIdx; 
+            
+            // 彻底清空上一局的状态残留
+            numFilled = false;
+            denFilled = false;
+            flashEdge = null;
+            isDragging = false;
+
+            document.getElementById("question-text").innerHTML = `在 \\(\\triangle ABC\\) 中，求 \\(${currentMission.ratioMath}\\)`;
+            document.getElementById("ratio-label").innerHTML = `\\(${currentMission.ratioMath}\\)`;
+            
+            resetSlot("numerator-slot", "分子");
+            resetSlot("denominator-slot", "分母");
+
+            if (isHardMode) {
+                gameState = "DRAWING_PHASE";
+                document.getElementById("formula-zone").classList.add("locked");
+            } else {
+                gameState = "SELECTION_PHASE";
+                document.getElementById("formula-zone").classList.remove("locked");
+            }
+            
+            updateInstruction();
+            drawGeometry();
+            
+            // 防御性清空缓存与非同步宣染调用
+            if (window.MathJax && window.MathJax.typesetClear) {
+                window.MathJax.typesetClear();
+                if (window.MathJax.typesetPromise) {
+                    window.MathJax.typesetPromise().catch(err => console.warn("MathJax Async Warning:", err));
+                } else {
+                    window.MathJax.typeset();
+                }
+            }
+        } catch (error) {
+            console.error("nextMission() 执行时发生致命错误:", error);
+        }
     }
 
     function handleEdgeSelection(edgeType) {
-        let matched = false; let targetSlotId = null;
+        let matched = false;
+        let targetSlotId = null;
 
         if (edgeType === currentMission.steps.num && !numFilled) {
-            targetSlotId = "numerator-slot"; numFilled = true; matched = true;
+            targetSlotId = "numerator-slot";
+            numFilled = true;
+            matched = true;
         } else if (edgeType === currentMission.steps.den && !denFilled) {
-            targetSlotId = "denominator-slot"; denFilled = true; matched = true;
+            targetSlotId = "denominator-slot";
+            denFilled = true;
+            matched = true;
         }
 
         if (matched) {
-            combo++; wrongCombo = 0; score += 100 * combo;
+            combo++; wrongCombo = 0;
+            score += 100 * combo;
+            
             fillSlot(targetSlotId, currentMission.data[edgeType]);
             flashEdge = { id: edgeType, color: "#10B981", timer: Date.now() + 300 };
             drawGeometry();
@@ -598,18 +603,21 @@
 
             if (numFilled && denFilled) {
                 gameState = "SUCCESS";
-                document.getElementById("instruction").innerText = "✨ 建構完成！ ✨";
+                document.getElementById("instruction").innerText = "✨ 建构完成！ ✨";
                 document.getElementById("geometry-pane").classList.add("main-success");
                 updateUI();
                 setTimeout(() => {
                     document.getElementById("geometry-pane").classList.remove("main-success");
                     nextMission();
                 }, 700);
-            } else { updateInstruction(); }
+            } else {
+                updateInstruction();
+            }
             updateUI();
         } else {
             flashEdge = { id: edgeType, color: "#EF4444", timer: Date.now() + 400 };
-            drawGeometry(); handlePenalty();
+            drawGeometry();
+            handlePenalty();
         }
     }
 
@@ -626,12 +634,14 @@
         clearInterval(timerInterval);
         gameState = "GAMEOVER";
         
+        document.body.style.zoom = "1"; // 恢复 100% 缩放
+        
         const board = saveAndGetLeaderboard();
         
         let boardHTML = `<div class="leaderboard-box">
-            <h2 style="color: var(--accent); font-size: 4rem; margin-top: 0; margin-bottom: 20px; text-shadow: 0 0 20px var(--accent);">🏆 榮譽殿堂 🏆</h2>
+            <h2 style="color: var(--accent); font-size: 4rem; margin-top: 0; margin-bottom: 20px; text-shadow: 0 0 20px var(--accent);">🏆 荣誉殿堂 🏆</h2>
             <table class="leaderboard-table">
-                <tr><th>排名</th><th>玩家</th><th>分數</th></tr>`;
+                <tr><th>排名</th><th>玩家</th><th>分数</th></tr>`;
         
         board.forEach((entry, idx) => {
             let rank = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : (idx === 2 ? '🥉' : idx + 1));
@@ -646,12 +656,11 @@
         endScreen.className = "overlay";
         endScreen.innerHTML = `
             <h1 style="font-size: 8rem; margin-bottom: 10px; color: #FACC15; text-shadow: 0 0 50px rgba(250,204,21,0.6);">TIME UP!</h1>
-            <div style="font-size: 4rem; margin: 10px 0 30px 0;">最終得分：${score}</div>
+            <div style="font-size: 4rem; margin: 10px 0 30px 0;">最终得分：${score}</div>
             ${boardHTML}
-            <button class="mega-btn" onclick="location.reload()">重新挑戰</button>
+            <button class="mega-btn" onclick="location.reload()">重新挑战</button>
         `;
-        // 確保覆蓋層加在自適應容器內，與畫面完美契合
-        document.getElementById('app-scale-wrapper').appendChild(endScreen);
+        document.body.appendChild(endScreen);
         createExplosion(window.innerWidth/2, window.innerHeight/4);
     }
 
@@ -661,7 +670,7 @@
     
     function updateInstruction() {
         if(gameState === "DRAWING_PHASE") {
-            document.getElementById("instruction").innerText = "🔥 難度升級：請從發光頂點向下滑動，畫出高線";
+            document.getElementById("instruction").innerText = "🔥 难度升级：请从发光顶点向下滑动，画出高线";
             document.getElementById("instruction").style.color = "#EF4444";
         } else {
             let targets = [];
@@ -669,9 +678,9 @@
             if(!denFilled) { targets.push(`[${stepNames[currentMission.steps.den]}]`); activateSlot("denominator-slot"); }
             
             if(targets.length === 2) {
-                document.getElementById("instruction").innerText = `🎯 點擊圖形中的 ${targets[0]} 或 ${targets[1]} 放入右側公式`;
+                document.getElementById("instruction").innerText = `🎯 点击图形中的 ${targets[0]} 或 ${targets[1]} 放入右侧公式`;
             } else {
-                document.getElementById("instruction").innerText = `🎯 繼續點擊圖形中的 ${targets[0]} 放入右側公式`;
+                document.getElementById("instruction").innerText = `🎯 继续点击图形中的 ${targets[0]} 放入右侧公式`;
             }
             document.getElementById("instruction").style.color = "#FACC15";
         }
