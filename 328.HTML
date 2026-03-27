@@ -187,6 +187,9 @@
     }
 
     window.onload = () => {
+        // [新增修復] 在頁面加載時立即套用縮放，避免起始畫面字體暴增
+        setGameScale(0.33);
+
         canvas = document.getElementById('main-canvas'); ctx = canvas.getContext('2d');
         pCanvas = document.getElementById('particle-canvas'); pCtx = pCanvas.getContext('2d');
         rCanvas = document.getElementById('ripple-canvas'); rCtx = rCanvas.getContext('2d');
@@ -217,8 +220,6 @@
     }
 
     function startGame() {
-        setGameScale(0.33); // 调用底层重构的安全缩放逻辑
-
         const nameInput = document.getElementById('player-name').value.trim();
         currentPlayer = nameInput !== "" ? nameInput : "神秘挑战者";
         document.getElementById('player-display').innerText = `玩家: ${currentPlayer}`;
@@ -662,7 +663,7 @@
         clearInterval(timerInterval);
         gameState = "GAMEOVER";
         
-        setGameScale(1); // 恢复 100% 安全结构尺寸
+        // [新增修復] 移除 setGameScale(1)，防止結算介面字體比例暴走
         
         const board = saveAndGetLeaderboard();
         
