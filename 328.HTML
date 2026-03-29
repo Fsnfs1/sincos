@@ -1,786 +1,852 @@
+
+
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>三角比建构者 - 自由解构与防卡死稳定版</title>
-    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
-    <style>
-        :root {
-            --primary: #3B82F6; --success: #10B981; --danger: #EF4444; 
-            --dark: #030712; --light: #F8FAFC; --accent: #FACC15;
-            --glowing-cyan: #06B6D4;
-        }
-        
-        html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
-        html { transition: transform 0.3s ease-out; }
-        body { font-family: 'Segoe UI', sans-serif; background-color: var(--dark); color: var(--light); user-select: none; touch-action: none; }
-        
-        .game-wrapper { display: flex; width: 100%; height: 100%; overflow: hidden; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>三角比建构者 - 自由解构与防卡死稳定版</title>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <style>
+        :root {
+            --primary: #3B82F6; --success: #10B981; --danger: #EF4444; 
+            --dark: #030712; --light: #F8FAFC; --accent: #FACC15;
+            --glowing-cyan: #06B6D4;
+        }
+        
+        html, body { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; }
+        html { transition: transform 0.3s ease-out; }
+        body { font-family: 'Segoe UI', sans-serif; background-color: var(--dark); color: var(--light); user-select: none; touch-action: none; }
+        
+        .game-wrapper { display: flex; width: 100%; height: 100%; overflow: hidden; }
 
-        .geometry-pane { position: relative; flex: 2; height: 100%; border-right: 4px solid #334155; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box; cursor: crosshair;}
-        
-        #main-canvas, #particle-canvas, #ripple-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; object-fit: cover;}
-        #particle-canvas { z-index: 2; pointer-events: none; }
-        #ripple-canvas { z-index: 3; pointer-events: none; }
+        .geometry-pane { position: relative; flex: 2; height: 100%; border-right: 4px solid #334155; overflow: hidden; display: flex; flex-direction: column; box-sizing: border-box; cursor: crosshair;}
+        
+        #main-canvas, #particle-canvas, #ripple-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; object-fit: cover;}
+        #particle-canvas { z-index: 2; pointer-events: none; }
+        #ripple-canvas { z-index: 3; pointer-events: none; }
 
-        .q-floating-header { position: absolute; top: 30px; left: 0; width: 100%; z-index: 10; display: flex; flex-direction: column; align-items: center; pointer-events: none; }
-        .question-stem { font-size: 3.5rem; font-weight: bold; background: rgba(3, 7, 18, 0.9); padding: 18px 55px; border-radius: 20px; border: 3px solid #475569; box-shadow: 0 12px 35px rgba(0,0,0,0.6); text-shadow: 0 0 15px var(--light); }
-        .instruction-text { font-size: 2.2rem; color: var(--accent); margin-top: 15px; font-weight: bold; text-shadow: 0 0 10px rgba(250,204,21,0.5); padding: 5px 25px; background: rgba(0,0,0,0.6); border-radius: 12px;}
+        .q-floating-header { position: absolute; top: 30px; left: 0; width: 100%; z-index: 10; display: flex; flex-direction: column; align-items: center; pointer-events: none; transition: transform 0.3s; }
+        .question-stem { font-size: 3.5rem; font-weight: bold; background: rgba(3, 7, 18, 0.9); padding: 18px 55px; border-radius: 20px; border: 3px solid #475569; box-shadow: 0 12px 35px rgba(0,0,0,0.6); text-shadow: 0 0 15px var(--light); }
+        .instruction-text { font-size: 2.2rem; color: var(--accent); margin-top: 15px; font-weight: bold; text-shadow: 0 0 10px rgba(250,204,21,0.5); padding: 5px 25px; background: rgba(0,0,0,0.6); border-radius: 12px;}
 
-        .level-up-banner { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0.5); font-size: 5rem; font-weight: bold; color: var(--accent); text-shadow: 0 0 40px var(--accent); z-index: 50; opacity: 0; pointer-events: none; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); background: rgba(0,0,0,0.8); padding: 20px 40px; border-radius: 20px; border: 4px solid var(--accent); white-space: nowrap;}
-        .level-up-banner.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        .level-up-banner { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0.5); font-size: 5rem; font-weight: bold; color: var(--accent); text-shadow: 0 0 40px var(--accent); z-index: 50; opacity: 0; pointer-events: none; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); background: rgba(0,0,0,0.8); padding: 20px 40px; border-radius: 20px; border: 4px solid var(--accent); white-space: nowrap;}
+        .level-up-banner.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 
-        .info-pane { flex: 1; height: 100%; background: radial-gradient(circle at top right, #1f2937 0%, #030712 100%); display: flex; flex-direction: column; padding: 40px; box-sizing: border-box; justify-content: space-between; align-items: stretch; border-left: 2px solid #1f2937; z-index: 10;}
+        .info-pane { flex: 1; height: 100%; background: radial-gradient(circle at top right, #1f2937 0%, #030712 100%); display: flex; flex-direction: column; padding: 40px; box-sizing: border-box; justify-content: space-between; align-items: stretch; border-left: 2px solid #1f2937; z-index: 10;}
 
-        .info-card { background: rgba(255,255,255,0.03); border: 3px solid #334155; border-radius: 25px; padding: 25px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.4); margin-bottom: 25px;}
-        .player-info { font-size: 2rem; color: #94A3B8; margin-bottom: 10px; font-weight: bold; }
-        .score-box { font-size: 2.8rem; color: var(--accent); font-weight: bold; font-family: monospace; }
-        .combo-box { font-size: 2.2rem; color: var(--glowing-cyan); font-style: italic; opacity: 0; transition: opacity 0.2s, transform 0.2s; margin-top: 5px; }
-        .combo-box.show { opacity: 1; transform: scale(1.1); }
-        .penalty-box { font-size: 1.8rem; color: var(--danger); font-weight: bold; opacity: 0; margin-top: 5px; transition: opacity 0.2s;}
-        
-        .timer-box { font-size: 4rem; color: var(--success); font-weight: bold; font-family: monospace; text-shadow: 0 0 20px rgba(16,185,129,0.5); margin-top: 10px;}
-        .timer-warning { color: var(--danger); text-shadow: 0 0 20px rgba(239,68,68,0.8); animation: pulseTimer 0.5s infinite alternate; }
-        @keyframes pulseTimer { from { transform: scale(1); } to { transform: scale(1.05); } }
+        .info-card { background: rgba(255,255,255,0.03); border: 3px solid #334155; border-radius: 25px; padding: 25px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.4); margin-bottom: 25px;}
+        .player-info { font-size: 2rem; color: #94A3B8; margin-bottom: 10px; font-weight: bold; }
+        .score-box { font-size: 2.8rem; color: var(--accent); font-weight: bold; font-family: monospace; }
+        .combo-box { font-size: 2.2rem; color: var(--glowing-cyan); font-style: italic; opacity: 0; transition: opacity 0.2s, transform 0.2s; margin-top: 5px; }
+        .combo-box.show { opacity: 1; transform: scale(1.1); }
+        .penalty-box { font-size: 1.8rem; color: var(--danger); font-weight: bold; opacity: 0; margin-top: 5px; transition: opacity 0.2s;}
+        
+        .timer-box { font-size: 4rem; color: var(--success); font-weight: bold; font-family: monospace; text-shadow: 0 0 20px rgba(16,185,129,0.5); margin-top: 10px;}
+        .timer-warning { color: var(--danger); text-shadow: 0 0 20px rgba(239,68,68,0.8); animation: pulseTimer 0.5s infinite alternate; }
+        @keyframes pulseTimer { from { transform: scale(1); } to { transform: scale(1.05); } }
 
-        .formula-zone { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; background: rgba(0,0,0,0.2); border-radius: 25px; border: 4px solid var(--primary); padding: 40px; box-shadow: 0 0 40px rgba(59, 130, 246, 0.2); margin-bottom: 25px; transition: filter 0.3s;}
-        .formula-zone.locked { filter: grayscale(100%) opacity(0.3); pointer-events: none;}
-        .formula-title { font-size: 2.5rem; color: #94A3B8; margin-top: 0; margin-bottom: 30px; letter-spacing: 2px;}
-        
-        .fraction-builder { display: flex; align-items: center; gap: 25px; font-family: 'Times New Roman', serif; }
-        .func-label { font-size: 6rem; font-weight: bold; color: var(--light); }
-        .fraction-visual { display: flex; flex-direction: column; align-items: center; gap: 15px; width: 220px; }
-        .slot { width: 200px; height: 95px; border: 6px dashed #475569; border-radius: 18px; display: flex; justify-content: center; align-items: center; font-size: 4rem; font-weight: bold; color: #64748B; transition: all 0.2s; }
-        
-        @keyframes pulseActiveSlot { 0%, 100% { border-color: var(--accent); box-shadow: 0 0 20px rgba(250, 204, 21, 0.3); transform: scale(1.02); background: rgba(250, 204, 21, 0.05); color: var(--accent); } 50% { border-color: #FFF; box-shadow: 0 0 60px rgba(250, 204, 21, 0.8); transform: scale(1.1); background: rgba(250, 204, 21, 0.2); color: #FFF; } }
-        .slot.active { animation: pulseActiveSlot 0.7s infinite; border-style: solid; z-index: 10; }
-        .slot.filled { border-style: solid; border-color: var(--primary); color: var(--primary); background: rgba(59, 130, 246, 0.15); font-size: 5rem; box-shadow: 0 0 30px rgba(59, 130, 246, 0.4); transform: scale(1); animation: none; z-index: 1; }
-        .frac-line { width: 100%; height: 8px; background-color: var(--light); border-radius: 4px; }
+        .formula-zone { display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; background: rgba(0,0,0,0.2); border-radius: 25px; border: 4px solid var(--primary); padding: 40px; box-shadow: 0 0 40px rgba(59, 130, 246, 0.2); margin-bottom: 25px; transition: filter 0.3s;}
+        .formula-zone.locked { filter: grayscale(100%) opacity(0.3); pointer-events: none;}
+        .formula-title { font-size: 2.5rem; color: #94A3B8; margin-top: 0; margin-bottom: 30px; letter-spacing: 2px;}
+        
+        .fraction-builder { display: flex; align-items: center; gap: 25px; font-family: 'Times New Roman', serif; }
+        .func-label { font-size: 6rem; font-weight: bold; color: var(--light); }
+        .fraction-visual { display: flex; flex-direction: column; align-items: center; gap: 15px; width: 220px; }
+        .slot { width: 200px; height: 95px; border: 6px dashed #475569; border-radius: 18px; display: flex; justify-content: center; align-items: center; font-size: 4rem; font-weight: bold; color: #64748B; transition: all 0.2s; }
+        
+        @keyframes pulseActiveSlot { 0%, 100% { border-color: var(--accent); box-shadow: 0 0 20px rgba(250, 204, 21, 0.3); transform: scale(1.02); background: rgba(250, 204, 21, 0.05); color: var(--accent); } 50% { border-color: #FFF; box-shadow: 0 0 60px rgba(250, 204, 21, 0.8); transform: scale(1.1); background: rgba(250, 204, 21, 0.2); color: #FFF; } }
+        .slot.active { animation: pulseActiveSlot 0.7s infinite; border-style: solid; z-index: 10; }
+        .slot.filled { border-style: solid; border-color: var(--primary); color: var(--primary); background: rgba(59, 130, 246, 0.15); font-size: 5rem; box-shadow: 0 0 30px rgba(59, 130, 246, 0.4); transform: scale(1); animation: none; z-index: 1; }
+        .frac-line { width: 100%; height: 8px; background-color: var(--light); border-radius: 4px; }
 
-        @keyframes bgShake { 0% { transform: translate(0,0); } 20% { transform: translate(-25px, 15px) rotate(-1deg); } 40% { transform: translate(25px, -15px) rotate(1deg); } 60% { transform: translate(-25px, -15px) rotate(-1deg); } 80% { transform: translate(25px, 15px) rotate(1deg); } 100% { transform: translate(0,0); } }
-        .main-error { animation: bgShake 0.35s ease-in-out both; border-right: 15px solid var(--danger) !important; box-shadow: inset 0 0 250px rgba(239,68,68,0.7) !important; }
-        .main-success { border-right: 15px solid var(--success); box-shadow: inset 0 0 150px rgba(16,185,129,0.3); transition: all 0.3s; }
+        @keyframes bgShake { 0% { transform: translate(0,0); } 20% { transform: translate(-25px, 15px) rotate(-1deg); } 40% { transform: translate(25px, -15px) rotate(1deg); } 60% { transform: translate(-25px, -15px) rotate(-1deg); } 80% { transform: translate(25px, 15px) rotate(1deg); } 100% { transform: translate(0,0); } }
+        .main-error { animation: bgShake 0.35s ease-in-out both; border-right: 15px solid var(--danger) !important; box-shadow: inset 0 0 250px rgba(239,68,68,0.7) !important; }
+        .main-success { border-right: 15px solid var(--success); box-shadow: inset 0 0 150px rgba(16,185,129,0.3); transition: all 0.3s; }
 
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(7, 11, 20, 0.99); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(15px); }
-        .hidden { display: none !important; }
-        
-        .player-input { font-size: 2.5rem; padding: 20px 40px; border-radius: 20px; border: 4px solid #475569; background: rgba(15,23,42,0.8); color: var(--light); text-align: center; margin-top: 40px; width: 500px; outline: none; }
-        .player-input:focus { border-color: var(--primary); box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
-        .mega-btn { padding: 25px 80px; font-size: 3.5rem; background: var(--primary); color: white; border: none; border-radius: 20px; cursor: pointer; margin-top: 30px; box-shadow: 0 15px 40px rgba(37, 99, 235, 0.5); transition: all 0.2s;}
-        .mega-btn:hover { transform: scale(1.05) translateY(-5px); background: #1D4ED8; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(7, 11, 20, 0.99); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(15px); }
+        .hidden { display: none !important; }
+        
+        .player-input { font-size: 2.5rem; padding: 20px 40px; border-radius: 20px; border: 4px solid #475569; background: rgba(15,23,42,0.8); color: var(--light); text-align: center; margin-top: 40px; width: 500px; outline: none; }
+        .player-input:focus { border-color: var(--primary); box-shadow: 0 0 20px rgba(59, 130, 246, 0.5); }
+        .mega-btn { padding: 25px 50px; font-size: 3rem; background: var(--primary); color: white; border: none; border-radius: 20px; cursor: pointer; box-shadow: 0 15px 40px rgba(37, 99, 235, 0.5); transition: all 0.2s; white-space: nowrap;}
+        .mega-btn:hover { transform: scale(1.05) translateY(-5px); background: #1D4ED8; }
 
-        .leaderboard-box { background: rgba(15, 23, 42, 0.9); border: 4px solid var(--accent); border-radius: 25px; padding: 30px 50px; width: 700px; box-shadow: 0 20px 60px rgba(0,0,0,0.8); margin: 30px 0; }
-        .leaderboard-table { width: 100%; border-collapse: collapse; font-size: 2.5rem; text-align: center; }
-        .leaderboard-table th { color: #94A3B8; padding-bottom: 15px; border-bottom: 2px solid #334155; }
-        .leaderboard-table td { padding: 15px 0; border-bottom: 1px solid #1e293b; }
-        @keyframes slideInRank { 0% { opacity: 0; transform: translateX(50px); } 100% { opacity: 1; transform: translateX(0); } }
-        @keyframes pulseRank { 0%, 100% { background: rgba(250, 204, 21, 0.2); transform: scale(1); box-shadow: 0 0 20px rgba(250, 204, 21, 0.4); } 50% { background: rgba(250, 204, 21, 0.4); transform: scale(1.02); box-shadow: 0 0 40px rgba(250, 204, 21, 0.8); } }
-        .current-player-rank { color: var(--accent); font-weight: bold; border-radius: 10px; animation: pulseRank 1s infinite alternate !important; }
+        .leaderboard-box { background: rgba(15, 23, 42, 0.9); border: 4px solid var(--accent); border-radius: 25px; padding: 30px 50px; width: 700px; box-shadow: 0 20px 60px rgba(0,0,0,0.8); margin: 30px 0; }
+        .leaderboard-table { width: 100%; border-collapse: collapse; font-size: 2.5rem; text-align: center; }
+        .leaderboard-table th { color: #94A3B8; padding-bottom: 15px; border-bottom: 2px solid #334155; }
+        .leaderboard-table td { padding: 15px 0; border-bottom: 1px solid #1e293b; }
+        @keyframes slideInRank { 0% { opacity: 0; transform: translateX(50px); } 100% { opacity: 1; transform: translateX(0); } }
+        @keyframes pulseRank { 0%, 100% { background: rgba(250, 204, 21, 0.2); transform: scale(1); box-shadow: 0 0 20px rgba(250, 204, 21, 0.4); } 50% { background: rgba(250, 204, 21, 0.4); transform: scale(1.02); box-shadow: 0 0 40px rgba(250, 204, 21, 0.8); } }
+        .current-player-rank { color: var(--accent); font-weight: bold; border-radius: 10px; animation: pulseRank 1s infinite alternate !important; }
 
-        .ritual-text { position: absolute; font-size: 7rem; font-weight: bold; font-style: italic; opacity: 0; z-index: 50; text-shadow: 0 0 30px rgba(0,0,0,0.9); pointer-events: none; }
-        @keyframes flyUp { 0% { opacity: 1; transform: translateY(40px) scale(0.5); } 20% { opacity: 1; transform: translateY(0) scale(1.2); } 80% { opacity: 1; transform: translateY(-100px) scale(1); } 100% { opacity: 0; transform: translateY(-150px) scale(0.8); } }
-        
-        /* 全屏切换按钮样式 */
-        .fullscreen-btn { position: fixed; top: 20px; right: 20px; background: rgba(15, 23, 42, 0.8); border: 2px solid #475569; color: var(--light); padding: 12px 24px; border-radius: 12px; cursor: pointer; font-size: 1.8rem; font-weight: bold; z-index: 1000; transition: all 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        .fullscreen-btn:hover { border-color: var(--accent); color: var(--accent); transform: scale(1.05); }
-    </style>
+        .ritual-text { position: absolute; font-size: 7rem; font-weight: bold; font-style: italic; opacity: 0; z-index: 50; text-shadow: 0 0 30px rgba(0,0,0,0.9); pointer-events: none; }
+        @keyframes flyUp { 0% { opacity: 1; transform: translateY(40px) scale(0.5); } 20% { opacity: 1; transform: translateY(0) scale(1.2); } 80% { opacity: 1; transform: translateY(-100px) scale(1); } 100% { opacity: 0; transform: translateY(-150px) scale(0.8); } }
+        
+        .fullscreen-btn { position: fixed; top: 20px; right: 20px; background: rgba(15, 23, 42, 0.8); border: 2px solid #475569; color: var(--light); padding: 12px 24px; border-radius: 12px; cursor: pointer; font-size: 1.8rem; font-weight: bold; z-index: 1000; transition: all 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .fullscreen-btn:hover { border-color: var(--accent); color: var(--accent); transform: scale(1.05); }
+
+        /* === 新增：竪屏模式與控制面板樣式 === */
+        .controls-top-left { position: fixed; top: 20px; left: 20px; z-index: 1000; display: flex; gap: 15px; }
+        .layout-btn { background: rgba(15, 23, 42, 0.8); border: 2px solid #475569; color: var(--light); padding: 12px 24px; border-radius: 12px; cursor: pointer; font-size: 1.8rem; font-weight: bold; transition: all 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        .layout-btn.active-layout { border-color: var(--accent); color: var(--accent); }
+
+        /* 竪屏版面排版邏輯：可視化在上，數據在下 */
+        .game-wrapper.portrait { flex-direction: column; }
+        .game-wrapper.portrait .geometry-pane { flex: 1.3; border-right: none; border-bottom: 4px solid #334155; width: 100%; }
+        .game-wrapper.portrait .info-pane { flex: 1; border-left: none; width: 100%; padding: 20px; flex-direction: row; gap: 20px; overflow-y: auto;}
+        .game-wrapper.portrait .info-card { flex: 1; margin-bottom: 0; display: flex; flex-direction: column; justify-content: center; }
+        .game-wrapper.portrait .formula-zone { flex: 1.5; margin-bottom: 0; }
+        .game-wrapper.portrait .q-floating-header { transform: scale(0.8); transform-origin: top center; top: 10px; }
+
+        @media (max-width: 1024px) {
+            .game-wrapper.portrait .info-pane { flex-direction: column; }
+            .game-wrapper.portrait .info-card { min-height: 250px; }
+        }
+    </style>
 </head>
 <body>
 
+<div class="controls-top-left">
+    <button id="btn-portrait" class="layout-btn" onclick="setLayout('portrait')">📱 竪屏</button>
+    <button id="btn-landscape" class="layout-btn" onclick="setLayout('landscape')">💻 橫屏</button>
+</div>
+
 <div id="start-screen" class="overlay">
-    <h1 style="font-size: 7rem; margin-bottom: 0; text-shadow: 0 0 50px var(--glowing-cyan); color: var(--glowing-cyan);">⚔️ 三角比建构者 ⚔️</h1>
-    <p style="font-size: 2.5rem; color: #94A3B8; margin-top: 10px; font-weight: bold;">30秒生存 ＆ 自由解构版</p>
-    
-    <input type="text" id="player-name" class="player-input" placeholder="输入玩家代号..." autocomplete="off" maxlength="12">
-    <button class="mega-btn" onclick="startGame()">接受挑战</button>
+    <h1 style="font-size: 7rem; margin-bottom: 0; text-shadow: 0 0 50px var(--glowing-cyan); color: var(--glowing-cyan);">⚔️ 三角比建构者 ⚔️</h1>
+    <p style="font-size: 2.5rem; color: #94A3B8; margin-top: 10px; font-weight: bold;">自由解构与稳定版</p>
+    
+    <input type="text" id="player-name" class="player-input" placeholder="输入玩家代号..." autocomplete="off" maxlength="12">
+    
+    <div style="display: flex; gap: 30px; margin-top: 40px; justify-content: center;">
+        <button class="mega-btn" onclick="startGame('30s')">⏱️ 30秒模式</button>
+        <button class="mega-btn" style="background: var(--success);" onclick="startGame('practice')">🧘 练习模式</button>
+    </div>
 </div>
 
 <div class="game-wrapper" id="main-wrapper">
-    <div class="geometry-pane" id="geometry-pane">
-        <canvas id="particle-canvas"></canvas>
-        <canvas id="ripple-canvas"></canvas>
-        <div class="q-floating-header">
-            <div class="question-stem" id="question-text">载入中...</div>
-            <div class="instruction-text" id="instruction">准备中...</div>
-        </div>
-        <div class="level-up-banner" id="level-up-banner">🚀 难度升级：向下滑动画出高线！</div>
-        <div class="viz-layer">
-            <canvas id="main-canvas"></canvas>
-        </div>
-    </div>
+    <div class="geometry-pane" id="geometry-pane">
+        <canvas id="particle-canvas"></canvas>
+        <canvas id="ripple-canvas"></canvas>
+        <div class="q-floating-header">
+            <div class="question-stem" id="question-text">载入中...</div>
+            <div class="instruction-text" id="instruction">准备中...</div>
+        </div>
+        <div class="level-up-banner" id="level-up-banner">🚀 难度升级：向下滑动画出高线！</div>
+        <div class="viz-layer">
+            <canvas id="main-canvas"></canvas>
+        </div>
+    </div>
 
-    <div class="info-pane">
-        <div class="info-card">
-            <div class="player-info" id="player-display">玩家: 挑战者</div>
-            <div class="timer-box" id="timer-display">30.0</div>
-            <div style="height: 2px; background: #334155; margin: 15px 0;"></div>
-            <div class="score-box">分数: <span id="score-display">0</span></div>
-            <div class="combo-box" id="combo-display">x1 Combo!</div>
-            <div class="penalty-box" id="penalty-display" style="opacity: 0;">连错惩罚: -100</div>
-        </div>
+    <div class="info-pane">
+        <div class="info-card">
+            <div class="player-info" id="player-display">玩家: 挑战者</div>
+            <div class="timer-box" id="timer-display">30.0</div>
+            <div style="height: 2px; background: #334155; margin: 15px 0;"></div>
+            <div class="score-box">分数: <span id="score-display">0</span></div>
+            <div class="combo-box" id="combo-display">x1 Combo!</div>
+            <div class="penalty-box" id="penalty-display" style="opacity: 0;">连错惩罚: -100</div>
+        </div>
 
-        <div class="formula-zone" id="formula-zone">
-            <h3 class="formula-title">建构目标</h3>
-            <div class="fraction-builder">
-                <div class="func-label" id="ratio-label">\(\sin\theta\)</div>
-                <div style="font-size: 5rem; color: var(--light); font-weight:bold; margin: 0 10px;">=</div>
-                <div class="fraction-visual">
-                    <div class="slot" id="numerator-slot">分子</div>
-                    <div class="frac-line"></div>
-                    <div class="slot" id="denominator-slot">分母</div>
-                </div>
-            </div>
-        </div>
-    </div>
+        <div class="formula-zone" id="formula-zone">
+            <h3 class="formula-title">建构目标</h3>
+            <div class="fraction-builder">
+                <div class="func-label" id="ratio-label">\(\sin\theta\)</div>
+                <div style="font-size: 5rem; color: var(--light); font-weight:bold; margin: 0 10px;">=</div>
+                <div class="fraction-visual">
+                    <div class="slot" id="numerator-slot">分子</div>
+                    <div class="frac-line"></div>
+                    <div class="slot" id="denominator-slot">分母</div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <button id="fullscreen-toggle" class="fullscreen-btn hidden" onclick="toggleFullScreen()">退出全屏 ⛶</button>
 
 <script>
-    const easyMissions = [
-        { type: "easy", vis: {top:{pt:[0, 12], name:"A"}, foot:{pt:[0, 0], name:"C"}, ref:{pt:[5, 0], name:"B"}}, ratioMath: "\\cos B", steps: {num:"adj", den:"hyp"}, data: {opp:"12", adj:"5", hyp:"13"} },
-        { type: "easy", vis: {top:{pt:[0, 15], name:"A"}, foot:{pt:[0, 0], name:"C"}, ref:{pt:[-8, 0], name:"B"}}, ratioMath: "\\tan B", steps: {num:"opp", den:"adj"}, data: {opp:"15", adj:"8", hyp:"17"} },
-        { type: "easy", vis: {top:{pt:[0, 8], name:"B"}, foot:{pt:[0, 0], name:"A"}, ref:{pt:[15, 0], name:"C"}}, ratioMath: "\\sin C", steps: {num:"opp", den:"hyp"}, data: {opp:"8", adj:"15", hyp:"17"} }
-    ];
-
-    const hardMissions = [
-        { type: "hard", vis: {top:{pt:[0, 12], name:"A"}, foot:{pt:[0, 0], name:"D"}, ref:{pt:[-5, 0], name:"B"}, other:{pt:[9, 0], name:"C"}}, ratioMath: "\\sin B", steps: {num:"opp", den:"hyp"}, data: {opp:"12", adj:"5", hyp:"13"} },
-        { type: "hard", vis: {top:{pt:[0, 8], name:"A"}, foot:{pt:[0, 0], name:"D"}, ref:{pt:[15, 0], name:"C"}, other:{pt:[-6, 0], name:"B"}}, ratioMath: "\\cos C", steps: {num:"adj", den:"hyp"}, data: {opp:"8", adj:"15", hyp:"17"} },
-        { type: "hard", vis: {top:{pt:[0, 15], name:"A"}, foot:{pt:[0, 0], name:"D"}, ref:{pt:[20, 0], name:"C"}, other:{pt:[8, 0], name:"B"}}, ratioMath: "\\tan C", steps: {num:"opp", den:"adj"}, data: {opp:"15", adj:"20", hyp:"25"} },
-        { type: "hard", vis: {top:{pt:[0, 8], name:"A"}, foot:{pt:[0, 0], name:"D"}, ref:{pt:[-15, 0], name:"B"}, other:{pt:[-6, 0], name:"C"}}, ratioMath: "\\sin B", steps: {num:"opp", den:"hyp"}, data: {opp:"8", adj:"15", hyp:"17"} }
-    ];
-
-    const stepNames = { "opp": "对边", "adj": "邻边", "hyp": "斜边" };
-
-    let gameState = "MENU"; 
-    let currentPlayer = "神秘挑战者";
-    let score = 0; let combo = 0; let wrongCombo = 0;
-    let timeLeft = 30.0; let timerInterval;
-    let currentMission = null; 
-    
-    let numFilled = false;
-    let denFilled = false;
-
-    let ctx, canvas, pCtx, pCanvas, rCtx, rCanvas;
-    let isHardMode = false;
-    let flashEdge = null; 
-
-    let isDragging = false;
-    let drawStartX = 0, drawStartY = 0;
-    let mouseX = 0, mouseY = 0;
-    let pointerDownTime = 0;
-    let pointerDownPos = {x:0, y:0};
-    let ripples = [];
-
-    function setGameScale(targetScale) {
-        const root = document.documentElement;
-        if (targetScale === 1) {
-            root.style.transform = "none";
-            root.style.width = "100%";
-            root.style.height = "100%";
-        } else {
-            const invScale = 100 / targetScale;
-            root.style.transform = `scale(${targetScale})`;
-            root.style.transformOrigin = "top left";
-            root.style.width = `${invScale}vw`;
-            root.style.height = `${invScale}vh`;
-        }
-    }
-
-    // 全屏核心逻辑
-    function enterFullScreen() {
-        const elem = document.documentElement;
-        if (elem.requestFullscreen) {
-            elem.requestFullscreen().catch(err => console.warn("Fullscreen API Error:", err));
-        } else if (elem.webkitRequestFullscreen) { /* Safari */
-            elem.webkitRequestFullscreen();
-        } else if (elem.msRequestFullscreen) { /* IE11 */
-            elem.msRequestFullscreen();
-        }
-    }
-
-    function exitFullScreen() {
-        if (document.exitFullscreen) {
-            document.exitFullscreen();
-        } else if (document.webkitExitFullscreen) { /* Safari */
-            document.webkitExitFullscreen();
-        } else if (document.msExitFullscreen) { /* IE11 */
-            document.msExitFullscreen();
-        }
-    }
-
-    function toggleFullScreen() {
-        if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
-            enterFullScreen();
-        } else {
-            exitFullScreen();
-        }
-    }
-
-    // 监听全屏状态变更，更新按钮文本
-    function handleFullscreenChange() {
-        const btn = document.getElementById('fullscreen-toggle');
-        if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
-            btn.innerText = "进入全屏 ⛶";
-        } else {
-            btn.innerText = "退出全屏 ⛶";
-        }
-    }
-
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-    document.addEventListener('msfullscreenchange', handleFullscreenChange);
-
-    window.onload = () => {
-        setGameScale(0.33);
-
-        canvas = document.getElementById('main-canvas'); ctx = canvas.getContext('2d');
-        pCanvas = document.getElementById('particle-canvas'); pCtx = pCanvas.getContext('2d');
-        rCanvas = document.getElementById('ripple-canvas'); rCtx = rCanvas.getContext('2d');
-        
-        window.addEventListener('resize', adaptCanvas);
-        adaptCanvas(); 
-        
-        const pane = document.getElementById('geometry-pane');
-        pane.addEventListener('pointerdown', onPointerDown);
-        pane.addEventListener('pointermove', onPointerMove);
-        window.addEventListener('pointerup', onPointerUp);
-        
-        pane.addEventListener('touchstart', (e) => { e.preventDefault(); }, {passive: false});
-        pane.addEventListener('touchmove', (e) => { e.preventDefault(); }, {passive: false});
-
-        document.getElementById('player-name').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') startGame();
-        });
-    };
-
-    function adaptCanvas() {
-        const pane = document.getElementById('geometry-pane');
-        if(!pane) return;
-        canvas.width = pane.clientWidth; canvas.height = pane.clientHeight;
-        pCanvas.width = pane.clientWidth; pCanvas.height = pane.clientHeight;
-        rCanvas.width = pane.clientWidth; rCanvas.height = pane.clientHeight;
-        if(gameState === "SELECTION_PHASE" || gameState === "DRAWING_PHASE") drawGeometry();
-    }
-
-    function startGame() {
-        // 触发全屏并显示控制按钮
-        enterFullScreen();
-        document.getElementById('fullscreen-toggle').classList.remove('hidden');
-
-        const nameInput = document.getElementById('player-name').value.trim();
-        currentPlayer = nameInput !== "" ? nameInput : "神秘挑战者";
-        document.getElementById('player-display').innerText = `玩家: ${currentPlayer}`;
-
-        document.getElementById("start-screen").classList.add("hidden");
-        score = 0; combo = 0; wrongCombo = 0; timeLeft = 30.0;
-        
-        setTimeout(() => {
-            nextMission(); 
-            adaptCanvas(); 
-            requestAnimationFrame(animateParticles);
-            requestAnimationFrame(animateRipples);
-            updateUI();
-        }, 50);
-
-        clearInterval(timerInterval);
-        timerInterval = setInterval(() => {
-            if(gameState !== "PLAYING" && gameState !== "DRAWING_PHASE" && gameState !== "SELECTION_PHASE") return;
-            timeLeft -= 0.1;
-            const timerEl = document.getElementById("timer-display");
-            timerEl.innerText = Math.max(0, timeLeft).toFixed(1);
-            
-            if(timeLeft <= 5.0) timerEl.classList.add("timer-warning");
-            else timerEl.classList.remove("timer-warning");
-
-            if(timeLeft <= 0) endGame();
-        }, 100);
-    }
-
-    function createExplosion(x, y) {
-        for (let i = 0; i < 60; i++) {
-            particles.push({
-                x: x, y: y,
-                vx: (Math.random() - 0.5) * 35, vy: (Math.random() - 0.5) * 35 - 10,
-                radius: Math.random() * 10 + 4,
-                color: Math.random() > 0.3 ? '#10B981' : (Math.random() > 0.5 ? '#FACC15' : '#38BDF8'),
-                alpha: 1, decay: Math.random() * 0.02 + 0.015
-            });
-        }
-    }
-    let particles = [];
-    function animateParticles() {
-        pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
-        for (let i = particles.length - 1; i >= 0; i--) {
-            let p = particles[i];
-            p.x += p.vx; p.y += p.vy; p.vy += 0.8; p.alpha -= p.decay;
-            if (p.alpha <= 0) { particles.splice(i, 1); continue; }
-            pCtx.globalAlpha = p.alpha; pCtx.fillStyle = p.color;
-            pCtx.beginPath(); pCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); pCtx.fill();
-        }
-        pCtx.globalAlpha = 1;
-        requestAnimationFrame(animateParticles);
-    }
-
-    function createRipple(x, y) { ripples.push({ x: x, y: y, radius: 0, alpha: 0.6 }); }
-    function animateRipples() {
-        rCtx.clearRect(0, 0, rCanvas.width, rCanvas.height);
-        for (let i = ripples.length - 1; i >= 0; i--) {
-            let r = ripples[i];
-            r.radius += 8; r.alpha -= 0.03;
-            if (r.alpha <= 0) { ripples.splice(i, 1); continue; }
-            rCtx.globalAlpha = r.alpha; rCtx.strokeStyle = "#06B6D4"; rCtx.lineWidth = 4;
-            rCtx.beginPath(); rCtx.arc(r.x, r.y, r.radius, 0, Math.PI * 2); rCtx.stroke();
-        }
-        rCtx.globalAlpha = 1;
-        requestAnimationFrame(animateRipples);
-    }
-
-    function getCanvasCoords(clientX, clientY) {
-        if(clientX === undefined || clientY === undefined) return {x: 0, y: 0};
-        const rect = canvas.getBoundingClientRect();
-        const scaleX = canvas.width / rect.width;
-        const scaleY = canvas.height / rect.height;
-        return { 
-            x: (clientX - rect.left) * scaleX, 
-            y: (clientY - rect.top) * scaleY 
-        };
-    }
-
-    function dist2(v, w) { return Math.pow(v.x - w.x, 2) + Math.pow(v.y - w.y, 2); }
-    function distToSegment(p, v, w) {
-        let l2 = dist2(v, w);
-        if (l2 === 0) return Math.hypot(p.x - v.x, p.y - v.y);
-        let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
-        t = Math.max(0, Math.min(1, t));
-        return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y)));
-    }
-
-    function onPointerDown(e) {
-        if(gameState !== "DRAWING_PHASE" && gameState !== "SELECTION_PHASE") return;
-        const pos = getCanvasCoords(e.clientX, e.clientY);
-        pointerDownTime = Date.now(); pointerDownPos = pos;
-        createRipple(pos.x, pos.y);
-
-        if(gameState === "DRAWING_PHASE") {
-            const topVertex = ctx.renderData.pA; 
-            if (Math.hypot(pos.x - topVertex.x, pos.y - topVertex.y) < 150) { 
-                isDragging = true;
-                drawStartX = topVertex.x; drawStartY = topVertex.y;
-                mouseX = pos.x; mouseY = pos.y;
-                try { document.getElementById('geometry-pane').setPointerCapture(e.pointerId); } catch(err){}
-            }
-        }
-    }
-
-    function onPointerMove(e) {
-        if(!isDragging) return;
-        const pos = getCanvasCoords(e.clientX, e.clientY);
-        mouseX = pos.x; mouseY = pos.y;
-        
-        drawGeometry(); 
-        ctx.strokeStyle = "#FACC15"; ctx.lineWidth = 12; ctx.setLineDash([15, 15]);
-        ctx.beginPath(); ctx.moveTo(drawStartX, drawStartY); ctx.lineTo(mouseX, mouseY); ctx.stroke();
-        ctx.setLineDash([]);
-    }
-
-    function onPointerUp(e) {
-        const pos = getCanvasCoords(e.clientX, e.clientY);
-
-        if(isDragging) {
-            isDragging = false;
-            try { document.getElementById('geometry-pane').releasePointerCapture(e.pointerId); } catch(err){}
-            
-            const dragDistY = mouseY - drawStartY;
-            if (dragDistY > 80) { 
-                const targetFoot = ctx.renderData.pD;
-                createExplosion(targetFoot.x, targetFoot.y);
-                showFloatingText("NICE LINE!", "#FACC15");
-                
-                gameState = "SELECTION_PHASE";
-                document.getElementById("formula-zone").classList.remove("locked");
-                updateInstruction();
-            } else {
-                handlePenalty(); 
-            }
-            drawGeometry(); 
-            return;
-        }
-
-        if(gameState === "SELECTION_PHASE") {
-            const distMoved = Math.hypot(pos.x - pointerDownPos.x, pos.y - pointerDownPos.y);
-            const timeElapsed = Date.now() - pointerDownTime;
-            if(distMoved < 30 && timeElapsed < 500) handleCanvasClick(pos);
-        }
-    }
-
-    function handleCanvasClick(pos) {
-        if(!ctx.renderData) return;
-        const {pA, pD, pRef} = ctx.renderData;
-
-        const edges = [
-            { id: "opp", p1: pA, p2: pD },
-            { id: "adj", p1: pD, p2: pRef },
-            { id: "hyp", p1: pA, p2: pRef }
-        ];
-
-        let bestEdge = null;
-        let minScore = Infinity;
-
-        edges.forEach(edge => {
-            let dLine = distToSegment(pos, edge.p1, edge.p2);
-            let mid = { x: (edge.p1.x+edge.p2.x)/2, y: (edge.p1.y+edge.p2.y)/2 };
-            let dMid = Math.hypot(pos.x - mid.x, pos.y - mid.y);
-            let score = dLine + dMid * 0.15; 
-            
-            if (dLine < 150 && score < minScore) { 
-                minScore = score;
-                bestEdge = edge;
-            }
-        });
-
-        if (bestEdge) handleEdgeSelection(bestEdge.id);
-    }
-
-    function drawGeometry() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        const data = currentMission.vis;
-        
-        const topPadding = 150; const sidePadding = 120;
-        const drawW = canvas.width - sidePadding * 2;
-        const drawH = canvas.height - topPadding - 120; 
-
-        const pts = [data.top.pt, data.foot.pt, data.ref.pt];
-        if(data.other) pts.push(data.other.pt);
-
-        const minX = Math.min(...pts.map(p => p[0])); const maxX = Math.max(...pts.map(p => p[0]));
-        const minY = Math.min(...pts.map(p => p[1])); const maxY = Math.max(...pts.map(p => p[1]));
-
-        const scale = Math.min(drawW / (maxX - minX), drawH / (maxY - minY)) * 0.85;
-
-        const toScreen = (pt) => ({
-            x: canvas.width/2 + (pt[0] - (minX+maxX)/2) * scale,
-            y: topPadding + drawH/2 - (pt[1] - (minY+maxY)/2) * scale
-        });
-
-        const pA = toScreen(data.top.pt); const pD = toScreen(data.foot.pt); const pRef = toScreen(data.ref.pt);
-        const pOther = data.other ? toScreen(data.other.pt) : null;
-
-        ctx.renderData = { pA, pD, pRef, scale }; 
-
-        ctx.fillStyle = "rgba(59, 130, 246, 0.04)"; 
-        ctx.beginPath(); ctx.moveTo(pA.x, pA.y); ctx.lineTo(pRef.x, pRef.y); 
-        if(pOther) ctx.lineTo(pOther.x, pOther.y); else ctx.lineTo(pD.x, pD.y);
-        ctx.closePath(); ctx.fill();
-
-        ctx.strokeStyle = "rgba(148, 163, 184, 0.9)"; ctx.lineWidth = 14; ctx.lineCap = "round"; ctx.lineJoin = "round";
-        ctx.beginPath(); ctx.moveTo(pA.x, pA.y); ctx.lineTo(pRef.x, pRef.y); 
-        if(pOther) ctx.lineTo(pOther.x, pOther.y); else ctx.lineTo(pD.x, pD.y);
-        ctx.closePath(); ctx.stroke();
-
-        if (currentMission.type === "hard") {
-            const isObtuse = (data.ref.pt[0] * data.other.pt[0] > 0);
-            if (isObtuse) {
-                ctx.strokeStyle = "rgba(148, 163, 184, 0.5)"; ctx.lineWidth = 8; ctx.setLineDash([12, 12]);
-                ctx.beginPath(); ctx.moveTo(pD.x, pD.y); 
-                const innerPoint = Math.abs(data.ref.pt[0]) < Math.abs(data.other.pt[0]) ? pRef : pOther;
-                ctx.lineTo(innerPoint.x, innerPoint.y);
-                ctx.stroke(); ctx.setLineDash([]);
-            }
-
-            if (gameState === "DRAWING_PHASE") {
-                ctx.beginPath(); ctx.arc(pA.x, pA.y, 45, 0, Math.PI*2);
-                ctx.fillStyle = "rgba(250, 204, 21, 0.3)"; ctx.fill();
-                ctx.lineWidth = 6; ctx.strokeStyle = "#FACC15"; ctx.stroke();
-            } else if (gameState === "SELECTION_PHASE") {
-                ctx.strokeStyle = "#10B981"; ctx.lineWidth = 12; ctx.setLineDash([15, 15]);
-                ctx.beginPath(); ctx.moveTo(pA.x, pA.y); ctx.lineTo(pD.x, pD.y); ctx.stroke();
-                ctx.setLineDash([]);
-                drawRightAngle(ctx, pD, pRef, pA, 45);
-            }
-        } else if (currentMission.type === "easy" && gameState === "SELECTION_PHASE") {
-            drawRightAngle(ctx, pD, pRef, pA, 45);
-        }
-
-        if (gameState === "SELECTION_PHASE") {
-            const refColorRgb = varToRgb("--accent");
-            ctx.strokeStyle = `rgba(${refColorRgb}, 1)`; ctx.fillStyle = `rgba(${refColorRgb}, 0.2)`; ctx.lineWidth = 10;
-            const arcR = 90;
-            const angA = Math.atan2(pA.y - pRef.y, pA.x - pRef.x);
-            const angD = Math.atan2(pD.y - pRef.y, pD.x - pRef.x);
-            ctx.beginPath(); ctx.moveTo(pRef.x, pRef.y); ctx.arc(pRef.x, pRef.y, arcR, Math.min(angA, angD), Math.max(angA, angD)); ctx.closePath(); ctx.fill(); ctx.stroke();
-        }
-
-        drawVertexLabel(ctx, pA, data.top.name, 0, -45, "148, 163, 184");
-        drawVertexLabel(ctx, pRef, data.ref.name, 0, 45, "148, 163, 184");
-        if(pOther) drawVertexLabel(ctx, pOther, data.other.name, 0, 45, "148, 163, 184");
-        if(gameState === "SELECTION_PHASE") {
-            if(currentMission.type === "hard") drawVertexLabel(ctx, pD, "D", 0, 50, varToRgb("--success"));
-            drawEdgeLabel(ctx, pA, pD, currentMission.data.opp);
-            drawEdgeLabel(ctx, pD, pRef, currentMission.data.adj);
-            drawEdgeLabel(ctx, pA, pRef, currentMission.data.hyp);
-        } else if (currentMission.type === "easy") {
-            drawVertexLabel(ctx, pD, data.foot.name, 0, 45, "148, 163, 184");
-        }
-
-        if(flashEdge) {
-            let p1, p2;
-            if(flashEdge.id === "opp") { p1 = pA; p2 = pD; }
-            else if(flashEdge.id === "adj") { p1 = pD; p2 = pRef; }
-            else { p1 = pA; p2 = pRef; }
-            
-            ctx.strokeStyle = flashEdge.color; ctx.lineWidth = 20;
-            ctx.shadowColor = flashEdge.color; ctx.shadowBlur = 30;
-            ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
-            ctx.shadowBlur = 0; 
-            
-            if(Date.now() > flashEdge.timer) { flashEdge = null; drawGeometry(); }
-            else { requestAnimationFrame(drawGeometry); }
-        }
-    }
-
-    function drawRightAngle(ctx, vertex, p1, p2, size) {
-        const dx1 = Math.sign(p1.x - vertex.x) * size || 0, dy1 = Math.sign(p1.y - vertex.y) * size || 0;
-        const dx2 = Math.sign(p2.x - vertex.x) * size || 0, dy2 = Math.sign(p2.y - vertex.y) * size || 0;
-        ctx.strokeStyle = "rgba(148, 163, 184, 0.7)"; ctx.lineWidth = 6;
-        ctx.beginPath(); ctx.moveTo(vertex.x + dx1, vertex.y + dy1); ctx.lineTo(vertex.x + dx1 + dx2, vertex.y + dy1 + dy2); ctx.lineTo(vertex.x + dx2, vertex.y + dy2); ctx.stroke();
-    }
-
-    function drawVertexLabel(ctx, p, text, offX, offY, colorRgb) {
-        ctx.fillStyle = `rgba(${colorRgb}, 1)`; ctx.font = "bold 55px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
-        ctx.fillText(text, p.x + offX, p.y + offY);
-    }
-    
-    function drawEdgeLabel(ctx, p1, p2, text) {
-        const mx = (p1.x + p2.x)/2; const my = (p1.y + p2.y)/2;
-        ctx.font = "bold 40px 'Segoe UI'";
-        const w = ctx.measureText(text).width;
-        ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
-        ctx.beginPath(); ctx.roundRect(mx - w/2 - 15, my - 30, w + 30, 60, 10); ctx.fill();
-        ctx.fillStyle = "#F8FAFC"; ctx.textAlign="center"; ctx.textBaseline="middle";
-        ctx.fillText(text, mx, my);
-    }
-
-    function updateUI() {
-        document.getElementById("score-display").innerText = score;
-        const comboEl = document.getElementById("combo-display");
-        if(combo > 1) { comboEl.innerText = `x${combo} Combo!`; comboEl.classList.add("show"); } 
-        else { comboEl.classList.remove("show"); }
-
-        const penaltyEl = document.getElementById("penalty-display");
-        if(wrongCombo > 0) {
-            let pVal = 100 * Math.pow(2, wrongCombo - 1);
-            penaltyEl.innerText = `连错惩罚: -${pVal}`;
-            penaltyEl.classList.add("show");
-            penaltyEl.style.color = "var(--danger)";
-        } else {
-            penaltyEl.style.opacity = 0;
-        }
-    }
-
-    function handlePenalty() {
-        wrongCombo++; combo = 0; isHardMode = false; 
-        
-        let penalty = 100 * Math.pow(2, wrongCombo - 1);
-        score = Math.max(0, score - penalty);
-        updateUI();
-
-        const geometryPane = document.getElementById("geometry-pane");
-        geometryPane.classList.add("main-error");
-        setTimeout(() => geometryPane.classList.remove("main-error"), 400);
-        
-        if(gameState === "DRAWING_PHASE") {
-            setTimeout(() => {
-                if (gameState !== "GAMEOVER") nextMission(); 
-            }, 500); 
-        }
-    }
-
-    function nextMission() {
-        if (gameState === "GAMEOVER") return; 
-
-        try {
-            if (combo >= 3 && !isHardMode) {
-                isHardMode = true;
-                document.getElementById("level-up-banner").classList.add("show");
-                setTimeout(()=> document.getElementById("level-up-banner").classList.remove("show"), 1500);
-            }
-
-            let pool = isHardMode ? hardMissions : easyMissions;
-            let prevId = currentMission ? currentMission.id : -1;
-            let newIdx;
-            do { newIdx = Math.floor(Math.random() * pool.length); } while (newIdx === prevId && pool.length > 1);
-            
-            currentMission = pool[newIdx];
-            currentMission.id = newIdx; 
-            
-            numFilled = false;
-            denFilled = false;
-            flashEdge = null;
-            isDragging = false;
-
-            document.getElementById("question-text").innerHTML = `在 \\(\\triangle ABC\\) 中，求 \\(${currentMission.ratioMath}\\)`;
-            document.getElementById("ratio-label").innerHTML = `\\(${currentMission.ratioMath}\\)`;
-            
-            resetSlot("numerator-slot", "分子");
-            resetSlot("denominator-slot", "分母");
-
-            if (isHardMode) {
-                gameState = "DRAWING_PHASE";
-                document.getElementById("formula-zone").classList.add("locked");
-            } else {
-                gameState = "SELECTION_PHASE";
-                document.getElementById("formula-zone").classList.remove("locked");
-            }
-            
-            updateInstruction();
-            drawGeometry();
-            
-            if (window.MathJax && window.MathJax.typesetClear) {
-                window.MathJax.typesetClear();
-                if (window.MathJax.typesetPromise) {
-                    window.MathJax.typesetPromise().catch(err => console.warn("MathJax Async Warning:", err));
-                } else {
-                    window.MathJax.typeset();
-                }
-            }
-        } catch (error) {
-            console.error("nextMission() 执行时发生致命错误:", error);
-        }
-    }
-
-    function handleEdgeSelection(edgeType) {
-        let matched = false;
-        let targetSlotId = null;
-        let earlyDenominator = false;
-
-        if (!numFilled) {
-            if (edgeType === currentMission.steps.num) {
-                targetSlotId = "numerator-slot";
-                numFilled = true;
-                matched = true;
-            } else if (edgeType === currentMission.steps.den) {
-                earlyDenominator = true;
-            }
-        } else if (!denFilled) {
-            if (edgeType === currentMission.steps.den) {
-                targetSlotId = "denominator-slot";
-                denFilled = true;
-                matched = true;
-            }
-        }
-
-        if (matched) {
-            combo++; wrongCombo = 0;
-            score += 100 * combo;
-            
-            fillSlot(targetSlotId, currentMission.data[edgeType]);
-            flashEdge = { id: edgeType, color: "#10B981", timer: Date.now() + 300 };
-            drawGeometry();
-
-            const paneRect = document.getElementById("geometry-pane").getBoundingClientRect();
-            createExplosion(paneRect.width/2, paneRect.height/2);
-            showFloatingText(combo > 3 ? "GODLIKE!" : "NICE!", "#10B981");
-
-            if (numFilled && denFilled) {
-                gameState = "SUCCESS";
-                document.getElementById("instruction").innerText = "✨ 建构完成！ ✨";
-                document.getElementById("geometry-pane").classList.add("main-success");
-                updateUI();
-                setTimeout(() => {
-                    document.getElementById("geometry-pane").classList.remove("main-success");
-                    if (gameState !== "GAMEOVER") nextMission(); 
-                }, 700);
-            } else {
-                updateInstruction();
-            }
-            updateUI();
-        } else {
-            flashEdge = { id: edgeType, color: "#EF4444", timer: Date.now() + 400 };
-            drawGeometry();
-            
-            if (earlyDenominator) {
-                showFloatingText("请先寻找分子", "#EF4444");
-            }
-            handlePenalty();
-        }
-    }
-
-    function saveAndGetLeaderboard() {
-        let board = JSON.parse(localStorage.getItem('trigClassroomBoard')) || [];
-        board.push({ name: currentPlayer, score: score });
-        board.sort((a, b) => b.score - a.score);
-        board = board.slice(0, 5); 
-        localStorage.setItem('trigClassroomBoard', JSON.stringify(board));
-        return board;
-    }
-
-    function endGame() {
-        clearInterval(timerInterval);
-        gameState = "GAMEOVER";
-        
-        const board = saveAndGetLeaderboard();
-        
-        let boardHTML = `<div class="leaderboard-box">
-            <h2 style="color: var(--accent); font-size: 4rem; margin-top: 0; margin-bottom: 20px; text-shadow: 0 0 20px var(--accent);">🏆 荣誉殿堂 🏆</h2>
-            <table class="leaderboard-table">
-                <tr><th>排名</th><th>玩家</th><th>分数</th></tr>`;
-        
-        board.forEach((entry, idx) => {
-            let rank = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : (idx === 2 ? '🥉' : idx + 1));
-            let highlight = (entry.name === currentPlayer && entry.score === score) ? 'class="current-player-rank"' : '';
-            boardHTML += `<tr ${highlight} style="animation: slideInRank 0.5s ease forwards; animation-delay: ${idx * 0.15}s; opacity: 0;">
-                <td>${rank}</td><td>${entry.name}</td><td>${entry.score}</td>
-            </tr>`;
-        });
-        boardHTML += `</table></div>`;
-
-        const endScreen = document.createElement('div');
-        endScreen.className = "overlay";
-        endScreen.innerHTML = `
-            <h1 style="font-size: 8rem; margin-bottom: 10px; color: #FACC15; text-shadow: 0 0 50px rgba(250,204,21,0.6);">TIME UP!</h1>
-            <div style="font-size: 4rem; margin: 10px 0 30px 0;">最终得分：${score}</div>
-            ${boardHTML}
-            <button class="mega-btn" onclick="location.reload()">重新挑战</button>
-        `;
-        document.body.appendChild(endScreen);
-        createExplosion(window.innerWidth/2, window.innerHeight/4);
-    }
-
-    function resetSlot(id, text) { const el = document.getElementById(id); el.className = "slot"; el.innerText = text; el.classList.remove("active"); }
-    function activateSlot(id) { document.getElementById(id).classList.add("active"); }
-    function fillSlot(id, text) { const el = document.getElementById(id); el.className = "slot filled"; el.innerText = text; el.classList.remove("active");}
-    
-    function updateInstruction() {
-        if(gameState === "DRAWING_PHASE") {
-            document.getElementById("instruction").innerText = "🔥 难度升级：请从发光顶点向下滑动，画出高线";
-            document.getElementById("instruction").style.color = "#EF4444";
-        } else {
-            if (!numFilled) {
-                document.getElementById("instruction").innerText = `🎯 第一步：点击图形中的 [${stepNames[currentMission.steps.num]}] 作为分子`;
-                activateSlot("numerator-slot");
-                document.getElementById("denominator-slot").classList.remove("active");
-            } else if (!denFilled) {
-                document.getElementById("instruction").innerText = `🎯 第二步：点击图形中的 [${stepNames[currentMission.steps.den]}] 作为分母`;
-                document.getElementById("numerator-slot").classList.remove("active");
-                activateSlot("denominator-slot");
-            }
-            document.getElementById("instruction").style.color = "#FACC15";
-        }
-    }
-
-    function showFloatingText(text, color) {
-        const el = document.createElement('div'); el.className = 'ritual-text'; el.innerText = text; el.style.color = color;
-        el.style.left = '50%'; el.style.top = '40%'; el.style.transform = 'translate(-50%, -50%)'; el.style.animation = 'flyUp 1s ease-out forwards';
-        document.getElementById('geometry-pane').appendChild(el); setTimeout(() => el.remove(), 1000);
-    }
-    function varToRgb(varName) {
-        const hex = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
-        if(hex.startsWith('#')) { return `${parseInt(hex.slice(1, 3), 16)}, ${parseInt(hex.slice(3, 5), 16)}, ${parseInt(hex.slice(5, 7), 16)}`; }
-        return "255,255,255";
-    }
+    const easyMissions = [
+        { type: "easy", vis: {top:{pt:[0, 12], name:"A"}, foot:{pt:[0, 0], name:"C"}, ref:{pt:[5, 0], name:"B"}}, ratioMath: "\\cos B", steps: {num:"adj", den:"hyp"}, data: {opp:"12", adj:"5", hyp:"13"} },
+        { type: "easy", vis: {top:{pt:[0, 15], name:"A"}, foot:{pt:[0, 0], name:"C"}, ref:{pt:[-8, 0], name:"B"}}, ratioMath: "\\tan B", steps: {num:"opp", den:"adj"}, data: {opp:"15", adj:"8", hyp:"17"} },
+        { type: "easy", vis: {top:{pt:[0, 8], name:"B"}, foot:{pt:[0, 0], name:"A"}, ref:{pt:[15, 0], name:"C"}}, ratioMath: "\\sin C", steps: {num:"opp", den:"hyp"}, data: {opp:"8", adj:"15", hyp:"17"} }
+    ];
+
+    const hardMissions = [
+        { type: "hard", vis: {top:{pt:[0, 12], name:"A"}, foot:{pt:[0, 0], name:"D"}, ref:{pt:[-5, 0], name:"B"}, other:{pt:[9, 0], name:"C"}}, ratioMath: "\\sin B", steps: {num:"opp", den:"hyp"}, data: {opp:"12", adj:"5", hyp:"13"} },
+        { type: "hard", vis: {top:{pt:[0, 8], name:"A"}, foot:{pt:[0, 0], name:"D"}, ref:{pt:[15, 0], name:"C"}, other:{pt:[-6, 0], name:"B"}}, ratioMath: "\\cos C", steps: {num:"adj", den:"hyp"}, data: {opp:"8", adj:"15", hyp:"17"} },
+        { type: "hard", vis: {top:{pt:[0, 15], name:"A"}, foot:{pt:[0, 0], name:"D"}, ref:{pt:[20, 0], name:"C"}, other:{pt:[8, 0], name:"B"}}, ratioMath: "\\tan C", steps: {num:"opp", den:"adj"}, data: {opp:"15", adj:"20", hyp:"25"} },
+        { type: "hard", vis: {top:{pt:[0, 8], name:"A"}, foot:{pt:[0, 0], name:"D"}, ref:{pt:[-15, 0], name:"B"}, other:{pt:[-6, 0], name:"C"}}, ratioMath: "\\sin B", steps: {num:"opp", den:"hyp"}, data: {opp:"8", adj:"15", hyp:"17"} }
+    ];
+
+    const stepNames = { "opp": "对边", "adj": "邻边", "hyp": "斜边" };
+
+    let gameState = "MENU"; 
+    let gameMode = "30s"; // 新增：記錄遊戲模式
+    let currentPlayer = "神秘挑战者";
+    let score = 0; let combo = 0; let wrongCombo = 0;
+    let timeLeft = 30.0; let timerInterval;
+    let currentMission = null; 
+    
+    let numFilled = false;
+    let denFilled = false;
+
+    let ctx, canvas, pCtx, pCanvas, rCtx, rCanvas;
+    let isHardMode = false;
+    let flashEdge = null; 
+
+    let isDragging = false;
+    let drawStartX = 0, drawStartY = 0;
+    let mouseX = 0, mouseY = 0;
+    let pointerDownTime = 0;
+    let pointerDownPos = {x:0, y:0};
+    let ripples = [];
+
+    function setGameScale(targetScale) {
+        const root = document.documentElement;
+        if (targetScale === 1) {
+            root.style.transform = "none";
+            root.style.width = "100%";
+            root.style.height = "100%";
+        } else {
+            const invScale = 100 / targetScale;
+            root.style.transform = `scale(${targetScale})`;
+            root.style.transformOrigin = "top left";
+            root.style.width = `${invScale}vw`;
+            root.style.height = `${invScale}vh`;
+        }
+    }
+
+    /* === 新增：佈局切換與自動環境檢測 === */
+    function setLayout(mode) {
+        const wrapper = document.getElementById('main-wrapper');
+        const btnP = document.getElementById('btn-portrait');
+        const btnL = document.getElementById('btn-landscape');
+        if(mode === 'portrait') {
+            wrapper.classList.add('portrait');
+            btnP.classList.add('active-layout');
+            btnL.classList.remove('active-layout');
+        } else {
+            wrapper.classList.remove('portrait');
+            btnL.classList.add('active-layout');
+            btnP.classList.remove('active-layout');
+        }
+        setTimeout(adaptCanvas, 50); // 切換佈局後強制重繪畫布
+    }
+
+    function checkDeviceLayout() {
+        const isMobile = window.innerWidth <= 1024 || /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        setLayout(isMobile ? 'portrait' : 'landscape');
+    }
+
+    function enterFullScreen() {
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) {
+            elem.requestFullscreen().catch(err => console.warn("Fullscreen API Error:", err));
+        } else if (elem.webkitRequestFullscreen) {
+            elem.webkitRequestFullscreen();
+        } else if (elem.msRequestFullscreen) {
+            elem.msRequestFullscreen();
+        }
+    }
+
+    function exitFullScreen() {
+        if (document.exitFullscreen) {
+            document.exitFullscreen();
+        } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen();
+        } else if (document.msExitFullscreen) {
+            document.msExitFullscreen();
+        }
+    }
+
+    function toggleFullScreen() {
+        if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+            enterFullScreen();
+        } else {
+            exitFullScreen();
+        }
+    }
+
+    function handleFullscreenChange() {
+        const btn = document.getElementById('fullscreen-toggle');
+        if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.msFullscreenElement) {
+            btn.innerText = "进入全屏 ⛶";
+        } else {
+            btn.innerText = "退出全屏 ⛶";
+        }
+    }
+
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+    document.addEventListener('msfullscreenchange', handleFullscreenChange);
+
+    window.onload = () => {
+        setGameScale(0.33);
+
+        canvas = document.getElementById('main-canvas'); ctx = canvas.getContext('2d');
+        pCanvas = document.getElementById('particle-canvas'); pCtx = pCanvas.getContext('2d');
+        rCanvas = document.getElementById('ripple-canvas'); rCtx = rCanvas.getContext('2d');
+        
+        window.addEventListener('resize', () => { adaptCanvas(); checkDeviceLayout(); });
+        checkDeviceLayout(); // 初始化檢測設備以套用佈局
+        adaptCanvas(); 
+        
+        const pane = document.getElementById('geometry-pane');
+        pane.addEventListener('pointerdown', onPointerDown);
+        pane.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+        
+        pane.addEventListener('touchstart', (e) => { e.preventDefault(); }, {passive: false});
+        pane.addEventListener('touchmove', (e) => { e.preventDefault(); }, {passive: false});
+
+        document.getElementById('player-name').addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') startGame('30s'); // 預設 Enter 進入 30秒模式
+        });
+    };
+
+    function adaptCanvas() {
+        const pane = document.getElementById('geometry-pane');
+        if(!pane) return;
+        canvas.width = pane.clientWidth; canvas.height = pane.clientHeight;
+        pCanvas.width = pane.clientWidth; pCanvas.height = pane.clientHeight;
+        rCanvas.width = pane.clientWidth; rCanvas.height = pane.clientHeight;
+        if(gameState === "SELECTION_PHASE" || gameState === "DRAWING_PHASE") drawGeometry();
+    }
+
+    /* === 修訂：適配雙模式邏輯 === */
+    function startGame(mode = '30s') {
+        gameMode = mode;
+        enterFullScreen();
+        document.getElementById('fullscreen-toggle').classList.remove('hidden');
+
+        const nameInput = document.getElementById('player-name').value.trim();
+        currentPlayer = nameInput !== "" ? nameInput : "神秘挑战者";
+        const modeLabel = gameMode === 'practice' ? " (练习模式)" : "";
+        document.getElementById('player-display').innerText = `玩家: ${currentPlayer}${modeLabel}`;
+
+        document.getElementById("start-screen").classList.add("hidden");
+        score = 0; combo = 0; wrongCombo = 0; 
+        
+        timeLeft = gameMode === '30s' ? 30.0 : 0;
+        document.getElementById("timer-display").innerText = gameMode === '30s' ? "30.0" : "∞";
+        document.getElementById("timer-display").classList.remove("timer-warning");
+        
+        setTimeout(() => {
+            nextMission(); 
+            adaptCanvas(); 
+            requestAnimationFrame(animateParticles);
+            requestAnimationFrame(animateRipples);
+            updateUI();
+        }, 50);
+
+        clearInterval(timerInterval);
+        timerInterval = setInterval(() => {
+            if(gameState !== "PLAYING" && gameState !== "DRAWING_PHASE" && gameState !== "SELECTION_PHASE") return;
+            
+            if (gameMode === '30s') {
+                timeLeft -= 0.1;
+                const timerEl = document.getElementById("timer-display");
+                timerEl.innerText = Math.max(0, timeLeft).toFixed(1);
+                
+                if(timeLeft <= 5.0) timerEl.classList.add("timer-warning");
+                else timerEl.classList.remove("timer-warning");
+
+                if(timeLeft <= 0) endGame();
+            } else {
+                // 練習模式不扣時，顯示無限
+                document.getElementById("timer-display").innerText = "∞";
+                document.getElementById("timer-display").classList.remove("timer-warning");
+            }
+        }, 100);
+    }
+
+    function createExplosion(x, y) {
+        for (let i = 0; i < 60; i++) {
+            particles.push({
+                x: x, y: y,
+                vx: (Math.random() - 0.5) * 35, vy: (Math.random() - 0.5) * 35 - 10,
+                radius: Math.random() * 10 + 4,
+                color: Math.random() > 0.3 ? '#10B981' : (Math.random() > 0.5 ? '#FACC15' : '#38BDF8'),
+                alpha: 1, decay: Math.random() * 0.02 + 0.015
+            });
+        }
+    }
+    let particles = [];
+    function animateParticles() {
+        pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+        for (let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i];
+            p.x += p.vx; p.y += p.vy; p.vy += 0.8; p.alpha -= p.decay;
+            if (p.alpha <= 0) { particles.splice(i, 1); continue; }
+            pCtx.globalAlpha = p.alpha; pCtx.fillStyle = p.color;
+            pCtx.beginPath(); pCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); pCtx.fill();
+        }
+        pCtx.globalAlpha = 1;
+        requestAnimationFrame(animateParticles);
+    }
+
+    function createRipple(x, y) { ripples.push({ x: x, y: y, radius: 0, alpha: 0.6 }); }
+    function animateRipples() {
+        rCtx.clearRect(0, 0, rCanvas.width, rCanvas.height);
+        for (let i = ripples.length - 1; i >= 0; i--) {
+            let r = ripples[i];
+            r.radius += 8; r.alpha -= 0.03;
+            if (r.alpha <= 0) { ripples.splice(i, 1); continue; }
+            rCtx.globalAlpha = r.alpha; rCtx.strokeStyle = "#06B6D4"; rCtx.lineWidth = 4;
+            rCtx.beginPath(); rCtx.arc(r.x, r.y, r.radius, 0, Math.PI * 2); rCtx.stroke();
+        }
+        rCtx.globalAlpha = 1;
+        requestAnimationFrame(animateRipples);
+    }
+
+    function getCanvasCoords(clientX, clientY) {
+        if(clientX === undefined || clientY === undefined) return {x: 0, y: 0};
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        return { 
+            x: (clientX - rect.left) * scaleX, 
+            y: (clientY - rect.top) * scaleY 
+        };
+    }
+
+    function dist2(v, w) { return Math.pow(v.x - w.x, 2) + Math.pow(v.y - w.y, 2); }
+    function distToSegment(p, v, w) {
+        let l2 = dist2(v, w);
+        if (l2 === 0) return Math.hypot(p.x - v.x, p.y - v.y);
+        let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+        t = Math.max(0, Math.min(1, t));
+        return Math.hypot(p.x - (v.x + t * (w.x - v.x)), p.y - (v.y + t * (w.y - v.y)));
+    }
+
+    function onPointerDown(e) {
+        if(gameState !== "DRAWING_PHASE" && gameState !== "SELECTION_PHASE") return;
+        const pos = getCanvasCoords(e.clientX, e.clientY);
+        pointerDownTime = Date.now(); pointerDownPos = pos;
+        createRipple(pos.x, pos.y);
+
+        if(gameState === "DRAWING_PHASE") {
+            const topVertex = ctx.renderData.pA; 
+            if (Math.hypot(pos.x - topVertex.x, pos.y - topVertex.y) < 150) { 
+                isDragging = true;
+                drawStartX = topVertex.x; drawStartY = topVertex.y;
+                mouseX = pos.x; mouseY = pos.y;
+                try { document.getElementById('geometry-pane').setPointerCapture(e.pointerId); } catch(err){}
+            }
+        }
+    }
+
+    function onPointerMove(e) {
+        if(!isDragging) return;
+        const pos = getCanvasCoords(e.clientX, e.clientY);
+        mouseX = pos.x; mouseY = pos.y;
+        
+        drawGeometry(); 
+        ctx.strokeStyle = "#FACC15"; ctx.lineWidth = 12; ctx.setLineDash([15, 15]);
+        ctx.beginPath(); ctx.moveTo(drawStartX, drawStartY); ctx.lineTo(mouseX, mouseY); ctx.stroke();
+        ctx.setLineDash([]);
+    }
+
+    function onPointerUp(e) {
+        const pos = getCanvasCoords(e.clientX, e.clientY);
+
+        if(isDragging) {
+            isDragging = false;
+            try { document.getElementById('geometry-pane').releasePointerCapture(e.pointerId); } catch(err){}
+            
+            const dragDistY = mouseY - drawStartY;
+            if (dragDistY > 80) { 
+                const targetFoot = ctx.renderData.pD;
+                createExplosion(targetFoot.x, targetFoot.y);
+                showFloatingText("NICE LINE!", "#FACC15");
+                
+                gameState = "SELECTION_PHASE";
+                document.getElementById("formula-zone").classList.remove("locked");
+                updateInstruction();
+            } else {
+                handlePenalty(); 
+            }
+            drawGeometry(); 
+            return;
+        }
+
+        if(gameState === "SELECTION_PHASE") {
+            const distMoved = Math.hypot(pos.x - pointerDownPos.x, pos.y - pointerDownPos.y);
+            const timeElapsed = Date.now() - pointerDownTime;
+            if(distMoved < 30 && timeElapsed < 500) handleCanvasClick(pos);
+        }
+    }
+
+    function handleCanvasClick(pos) {
+        if(!ctx.renderData) return;
+        const {pA, pD, pRef} = ctx.renderData;
+
+        const edges = [
+            { id: "opp", p1: pA, p2: pD },
+            { id: "adj", p1: pD, p2: pRef },
+            { id: "hyp", p1: pA, p2: pRef }
+        ];
+
+        let bestEdge = null;
+        let minScore = Infinity;
+
+        edges.forEach(edge => {
+            let dLine = distToSegment(pos, edge.p1, edge.p2);
+            let mid = { x: (edge.p1.x+edge.p2.x)/2, y: (edge.p1.y+edge.p2.y)/2 };
+            let dMid = Math.hypot(pos.x - mid.x, pos.y - mid.y);
+            let score = dLine + dMid * 0.15; 
+            
+            if (dLine < 150 && score < minScore) { 
+                minScore = score;
+                bestEdge = edge;
+            }
+        });
+
+        if (bestEdge) handleEdgeSelection(bestEdge.id);
+    }
+
+    function drawGeometry() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const data = currentMission.vis;
+        
+        const topPadding = 150; const sidePadding = 120;
+        const drawW = canvas.width - sidePadding * 2;
+        const drawH = canvas.height - topPadding - 120; 
+
+        const pts = [data.top.pt, data.foot.pt, data.ref.pt];
+        if(data.other) pts.push(data.other.pt);
+
+        const minX = Math.min(...pts.map(p => p[0])); const maxX = Math.max(...pts.map(p => p[0]));
+        const minY = Math.min(...pts.map(p => p[1])); const maxY = Math.max(...pts.map(p => p[1]));
+
+        const scale = Math.min(drawW / (maxX - minX), drawH / (maxY - minY)) * 0.85;
+
+        const toScreen = (pt) => ({
+            x: canvas.width/2 + (pt[0] - (minX+maxX)/2) * scale,
+            y: topPadding + drawH/2 - (pt[1] - (minY+maxY)/2) * scale
+        });
+
+        const pA = toScreen(data.top.pt); const pD = toScreen(data.foot.pt); const pRef = toScreen(data.ref.pt);
+        const pOther = data.other ? toScreen(data.other.pt) : null;
+
+        ctx.renderData = { pA, pD, pRef, scale }; 
+
+        ctx.fillStyle = "rgba(59, 130, 246, 0.04)"; 
+        ctx.beginPath(); ctx.moveTo(pA.x, pA.y); ctx.lineTo(pRef.x, pRef.y); 
+        if(pOther) ctx.lineTo(pOther.x, pOther.y); else ctx.lineTo(pD.x, pD.y);
+        ctx.closePath(); ctx.fill();
+
+        ctx.strokeStyle = "rgba(148, 163, 184, 0.9)"; ctx.lineWidth = 14; ctx.lineCap = "round"; ctx.lineJoin = "round";
+        ctx.beginPath(); ctx.moveTo(pA.x, pA.y); ctx.lineTo(pRef.x, pRef.y); 
+        if(pOther) ctx.lineTo(pOther.x, pOther.y); else ctx.lineTo(pD.x, pD.y);
+        ctx.closePath(); ctx.stroke();
+
+        if (currentMission.type === "hard") {
+            const isObtuse = (data.ref.pt[0] * data.other.pt[0] > 0);
+            if (isObtuse) {
+                ctx.strokeStyle = "rgba(148, 163, 184, 0.5)"; ctx.lineWidth = 8; ctx.setLineDash([12, 12]);
+                ctx.beginPath(); ctx.moveTo(pD.x, pD.y); 
+                const innerPoint = Math.abs(data.ref.pt[0]) < Math.abs(data.other.pt[0]) ? pRef : pOther;
+                ctx.lineTo(innerPoint.x, innerPoint.y);
+                ctx.stroke(); ctx.setLineDash([]);
+            }
+
+            if (gameState === "DRAWING_PHASE") {
+                ctx.beginPath(); ctx.arc(pA.x, pA.y, 45, 0, Math.PI*2);
+                ctx.fillStyle = "rgba(250, 204, 21, 0.3)"; ctx.fill();
+                ctx.lineWidth = 6; ctx.strokeStyle = "#FACC15"; ctx.stroke();
+            } else if (gameState === "SELECTION_PHASE") {
+                ctx.strokeStyle = "#10B981"; ctx.lineWidth = 12; ctx.setLineDash([15, 15]);
+                ctx.beginPath(); ctx.moveTo(pA.x, pA.y); ctx.lineTo(pD.x, pD.y); ctx.stroke();
+                ctx.setLineDash([]);
+                drawRightAngle(ctx, pD, pRef, pA, 45);
+            }
+        } else if (currentMission.type === "easy" && gameState === "SELECTION_PHASE") {
+            drawRightAngle(ctx, pD, pRef, pA, 45);
+        }
+
+        if (gameState === "SELECTION_PHASE") {
+            const refColorRgb = varToRgb("--accent");
+            ctx.strokeStyle = `rgba(${refColorRgb}, 1)`; ctx.fillStyle = `rgba(${refColorRgb}, 0.2)`; ctx.lineWidth = 10;
+            const arcR = 90;
+            const angA = Math.atan2(pA.y - pRef.y, pA.x - pRef.x);
+            const angD = Math.atan2(pD.y - pRef.y, pD.x - pRef.x);
+            ctx.beginPath(); ctx.moveTo(pRef.x, pRef.y); ctx.arc(pRef.x, pRef.y, arcR, Math.min(angA, angD), Math.max(angA, angD)); ctx.closePath(); ctx.fill(); ctx.stroke();
+        }
+
+        drawVertexLabel(ctx, pA, data.top.name, 0, -45, "148, 163, 184");
+        drawVertexLabel(ctx, pRef, data.ref.name, 0, 45, "148, 163, 184");
+        if(pOther) drawVertexLabel(ctx, pOther, data.other.name, 0, 45, "148, 163, 184");
+        if(gameState === "SELECTION_PHASE") {
+            if(currentMission.type === "hard") drawVertexLabel(ctx, pD, "D", 0, 50, varToRgb("--success"));
+            drawEdgeLabel(ctx, pA, pD, currentMission.data.opp);
+            drawEdgeLabel(ctx, pD, pRef, currentMission.data.adj);
+            drawEdgeLabel(ctx, pA, pRef, currentMission.data.hyp);
+        } else if (currentMission.type === "easy") {
+            drawVertexLabel(ctx, pD, data.foot.name, 0, 45, "148, 163, 184");
+        }
+
+        if(flashEdge) {
+            let p1, p2;
+            if(flashEdge.id === "opp") { p1 = pA; p2 = pD; }
+            else if(flashEdge.id === "adj") { p1 = pD; p2 = pRef; }
+            else { p1 = pA; p2 = pRef; }
+            
+            ctx.strokeStyle = flashEdge.color; ctx.lineWidth = 20;
+            ctx.shadowColor = flashEdge.color; ctx.shadowBlur = 30;
+            ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+            ctx.shadowBlur = 0; 
+            
+            if(Date.now() > flashEdge.timer) { flashEdge = null; drawGeometry(); }
+            else { requestAnimationFrame(drawGeometry); }
+        }
+    }
+
+    function drawRightAngle(ctx, vertex, p1, p2, size) {
+        const dx1 = Math.sign(p1.x - vertex.x) * size || 0, dy1 = Math.sign(p1.y - vertex.y) * size || 0;
+        const dx2 = Math.sign(p2.x - vertex.x) * size || 0, dy2 = Math.sign(p2.y - vertex.y) * size || 0;
+        ctx.strokeStyle = "rgba(148, 163, 184, 0.7)"; ctx.lineWidth = 6;
+        ctx.beginPath(); ctx.moveTo(vertex.x + dx1, vertex.y + dy1); ctx.lineTo(vertex.x + dx1 + dx2, vertex.y + dy1 + dy2); ctx.lineTo(vertex.x + dx2, vertex.y + dy2); ctx.stroke();
+    }
+
+    function drawVertexLabel(ctx, p, text, offX, offY, colorRgb) {
+        ctx.fillStyle = `rgba(${colorRgb}, 1)`; ctx.font = "bold 55px sans-serif"; ctx.textAlign="center"; ctx.textBaseline="middle";
+        ctx.fillText(text, p.x + offX, p.y + offY);
+    }
+    
+    function drawEdgeLabel(ctx, p1, p2, text) {
+        const mx = (p1.x + p2.x)/2; const my = (p1.y + p2.y)/2;
+        ctx.font = "bold 40px 'Segoe UI'";
+        const w = ctx.measureText(text).width;
+        ctx.fillStyle = "rgba(15, 23, 42, 0.85)";
+        ctx.beginPath(); ctx.roundRect(mx - w/2 - 15, my - 30, w + 30, 60, 10); ctx.fill();
+        ctx.fillStyle = "#F8FAFC"; ctx.textAlign="center"; ctx.textBaseline="middle";
+        ctx.fillText(text, mx, my);
+    }
+
+    function updateUI() {
+        document.getElementById("score-display").innerText = score;
+        const comboEl = document.getElementById("combo-display");
+        if(combo > 1) { comboEl.innerText = `x${combo} Combo!`; comboEl.classList.add("show"); } 
+        else { comboEl.classList.remove("show"); }
+
+        const penaltyEl = document.getElementById("penalty-display");
+        if(wrongCombo > 0) {
+            let pVal = 100 * Math.pow(2, wrongCombo - 1);
+            penaltyEl.innerText = `连错惩罚: -${pVal}`;
+            penaltyEl.classList.add("show");
+            penaltyEl.style.color = "var(--danger)";
+        } else {
+            penaltyEl.style.opacity = 0;
+        }
+    }
+
+    function handlePenalty() {
+        wrongCombo++; combo = 0; isHardMode = false; 
+        
+        let penalty = 100 * Math.pow(2, wrongCombo - 1);
+        score = Math.max(0, score - penalty);
+        updateUI();
+
+        const geometryPane = document.getElementById("geometry-pane");
+        geometryPane.classList.add("main-error");
+        setTimeout(() => geometryPane.classList.remove("main-error"), 400);
+        
+        if(gameState === "DRAWING_PHASE") {
+            setTimeout(() => {
+                if (gameState !== "GAMEOVER") nextMission(); 
+            }, 500); 
+        }
+    }
+
+    function nextMission() {
+        if (gameState === "GAMEOVER") return; 
+
+        try {
+            if (combo >= 3 && !isHardMode) {
+                isHardMode = true;
+                document.getElementById("level-up-banner").classList.add("show");
+                setTimeout(()=> document.getElementById("level-up-banner").classList.remove("show"), 1500);
+            }
+
+            let pool = isHardMode ? hardMissions : easyMissions;
+            let prevId = currentMission ? currentMission.id : -1;
+            let newIdx;
+            do { newIdx = Math.floor(Math.random() * pool.length); } while (newIdx === prevId && pool.length > 1);
+            
+            currentMission = pool[newIdx];
+            currentMission.id = newIdx; 
+            
+            numFilled = false;
+            denFilled = false;
+            flashEdge = null;
+            isDragging = false;
+
+            document.getElementById("question-text").innerHTML = `在 \\(\\triangle ABC\\) 中，求 \\(${currentMission.ratioMath}\\)`;
+            document.getElementById("ratio-label").innerHTML = `\\(${currentMission.ratioMath}\\)`;
+            
+            resetSlot("numerator-slot", "分子");
+            resetSlot("denominator-slot", "分母");
+
+            if (isHardMode) {
+                gameState = "DRAWING_PHASE";
+                document.getElementById("formula-zone").classList.add("locked");
+            } else {
+                gameState = "SELECTION_PHASE";
+                document.getElementById("formula-zone").classList.remove("locked");
+            }
+            
+            updateInstruction();
+            drawGeometry();
+            
+            if (window.MathJax && window.MathJax.typesetClear) {
+                window.MathJax.typesetClear();
+                if (window.MathJax.typesetPromise) {
+                    window.MathJax.typesetPromise().catch(err => console.warn("MathJax Async Warning:", err));
+                } else {
+                    window.MathJax.typeset();
+                }
+            }
+        } catch (error) {
+            console.error("nextMission() 执行时发生致命错误:", error);
+        }
+    }
+
+    function handleEdgeSelection(edgeType) {
+        let matched = false;
+        let targetSlotId = null;
+        let earlyDenominator = false;
+
+        if (!numFilled) {
+            if (edgeType === currentMission.steps.num) {
+                targetSlotId = "numerator-slot";
+                numFilled = true;
+                matched = true;
+            } else if (edgeType === currentMission.steps.den) {
+                earlyDenominator = true;
+            }
+        } else if (!denFilled) {
+            if (edgeType === currentMission.steps.den) {
+                targetSlotId = "denominator-slot";
+                denFilled = true;
+                matched = true;
+            }
+        }
+
+        if (matched) {
+            combo++; wrongCombo = 0;
+            score += 100 * combo;
+            
+            fillSlot(targetSlotId, currentMission.data[edgeType]);
+            flashEdge = { id: edgeType, color: "#10B981", timer: Date.now() + 300 };
+            drawGeometry();
+
+            const paneRect = document.getElementById("geometry-pane").getBoundingClientRect();
+            createExplosion(paneRect.width/2, paneRect.height/2);
+            showFloatingText(combo > 3 ? "GODLIKE!" : "NICE!", "#10B981");
+
+            if (numFilled && denFilled) {
+                gameState = "SUCCESS";
+                document.getElementById("instruction").innerText = "✨ 建构完成！ ✨";
+                document.getElementById("geometry-pane").classList.add("main-success");
+                updateUI();
+                setTimeout(() => {
+                    document.getElementById("geometry-pane").classList.remove("main-success");
+                    if (gameState !== "GAMEOVER") nextMission(); 
+                }, 700);
+            } else {
+                updateInstruction();
+            }
+            updateUI();
+        } else {
+            flashEdge = { id: edgeType, color: "#EF4444", timer: Date.now() + 400 };
+            drawGeometry();
+            
+            if (earlyDenominator) {
+                showFloatingText("请先寻找分子", "#EF4444");
+            }
+            handlePenalty();
+        }
+    }
+
+    function saveAndGetLeaderboard() {
+        let board = JSON.parse(localStorage.getItem('trigClassroomBoard')) || [];
+        // 如果是練習模式，不寫入排行榜
+        if (gameMode !== 'practice') {
+            board.push({ name: currentPlayer, score: score });
+            board.sort((a, b) => b.score - a.score);
+            board = board.slice(0, 5); 
+            localStorage.setItem('trigClassroomBoard', JSON.stringify(board));
+        }
+        return board;
+    }
+
+    function endGame() {
+        clearInterval(timerInterval);
+        gameState = "GAMEOVER";
+        
+        const board = saveAndGetLeaderboard();
+        
+        let boardHTML = `<div class="leaderboard-box">
+            <h2 style="color: var(--accent); font-size: 4rem; margin-top: 0; margin-bottom: 20px; text-shadow: 0 0 20px var(--accent);">🏆 荣誉殿堂 🏆</h2>
+            <table class="leaderboard-table">
+                <tr><th>排名</th><th>玩家</th><th>分数</th></tr>`;
+        
+        board.forEach((entry, idx) => {
+            let rank = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : (idx === 2 ? '🥉' : idx + 1));
+            let highlight = (entry.name === currentPlayer && entry.score === score) ? 'class="current-player-rank"' : '';
+            boardHTML += `<tr ${highlight} style="animation: slideInRank 0.5s ease forwards; animation-delay: ${idx * 0.15}s; opacity: 0;">
+                <td>${rank}</td><td>${entry.name}</td><td>${entry.score}</td>
+            </tr>`;
+        });
+        boardHTML += `</table></div>`;
+
+        const endScreen = document.createElement('div');
+        endScreen.className = "overlay";
+        endScreen.innerHTML = `
+            <h1 style="font-size: 8rem; margin-bottom: 10px; color: #FACC15; text-shadow: 0 0 50px rgba(250,204,21,0.6);">TIME UP!</h1>
+            <div style="font-size: 4rem; margin: 10px 0 30px 0;">最终得分：${score}</div>
+            ${boardHTML}
+            <button class="mega-btn" onclick="location.reload()">重新挑战</button>
+        `;
+        document.body.appendChild(endScreen);
+        createExplosion(window.innerWidth/2, window.innerHeight/4);
+    }
+
+    function resetSlot(id, text) { const el = document.getElementById(id); el.className = "slot"; el.innerText = text; el.classList.remove("active"); }
+    function activateSlot(id) { document.getElementById(id).classList.add("active"); }
+    function fillSlot(id, text) { const el = document.getElementById(id); el.className = "slot filled"; el.innerText = text; el.classList.remove("active");}
+    
+    function updateInstruction() {
+        if(gameState === "DRAWING_PHASE") {
+            document.getElementById("instruction").innerText = "🔥 难度升级：请从发光顶点向下滑动，画出高线";
+            document.getElementById("instruction").style.color = "#EF4444";
+        } else {
+            if (!numFilled) {
+                document.getElementById("instruction").innerText = `🎯 第一步：点击图形中的 [${stepNames[currentMission.steps.num]}] 作为分子`;
+                activateSlot("numerator-slot");
+                document.getElementById("denominator-slot").classList.remove("active");
+            } else if (!denFilled) {
+                document.getElementById("instruction").innerText = `🎯 第二步：点击图形中的 [${stepNames[currentMission.steps.den]}] 作为分母`;
+                document.getElementById("numerator-slot").classList.remove("active");
+                activateSlot("denominator-slot");
+            }
+            document.getElementById("instruction").style.color = "#FACC15";
+        }
+    }
+
+    function showFloatingText(text, color) {
+        const el = document.createElement('div'); el.className = 'ritual-text'; el.innerText = text; el.style.color = color;
+        el.style.left = '50%'; el.style.top = '40%'; el.style.transform = 'translate(-50%, -50%)'; el.style.animation = 'flyUp 1s ease-out forwards';
+        document.getElementById('geometry-pane').appendChild(el); setTimeout(() => el.remove(), 1000);
+    }
+    function varToRgb(varName) {
+        const hex = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+        if(hex.startsWith('#')) { return `${parseInt(hex.slice(1, 3), 16)}, ${parseInt(hex.slice(3, 5), 16)}, ${parseInt(hex.slice(5, 7), 16)}`; }
+        return "255,255,255";
+    }
 </script>
 
 </body>
