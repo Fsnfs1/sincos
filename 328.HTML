@@ -1,11 +1,10 @@
 
-
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>123</title>
+    <title>三角比建构者 - 自由解构与防卡死稳定版</title>
     <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
@@ -87,12 +86,10 @@
         .fullscreen-btn { position: fixed; top: 20px; right: 20px; background: rgba(15, 23, 42, 0.8); border: 2px solid #475569; color: var(--light); padding: 12px 24px; border-radius: 12px; cursor: pointer; font-size: 1.8rem; font-weight: bold; z-index: 1000; transition: all 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         .fullscreen-btn:hover { border-color: var(--accent); color: var(--accent); transform: scale(1.05); }
 
-        /* === 新增：竪屏模式與控制面板樣式 === */
         .controls-top-left { position: fixed; top: 20px; left: 20px; z-index: 1000; display: flex; gap: 15px; }
         .layout-btn { background: rgba(15, 23, 42, 0.8); border: 2px solid #475569; color: var(--light); padding: 12px 24px; border-radius: 12px; cursor: pointer; font-size: 1.8rem; font-weight: bold; transition: all 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         .layout-btn.active-layout { border-color: var(--accent); color: var(--accent); }
 
-        /* 竪屏版面排版邏輯：可視化在上，數據在下 */
         .game-wrapper.portrait { flex-direction: column; }
         .game-wrapper.portrait .geometry-pane { flex: 1.3; border-right: none; border-bottom: 4px solid #334155; width: 100%; }
         .game-wrapper.portrait .info-pane { flex: 1; border-left: none; width: 100%; padding: 20px; flex-direction: row; gap: 20px; overflow-y: auto;}
@@ -125,7 +122,7 @@
     </div>
 </div>
 
-<div class="game-wrapper" id="main-wrapper">
+<div class="game-wrapper hidden" id="main-wrapper">
     <div class="geometry-pane" id="geometry-pane">
         <canvas id="particle-canvas"></canvas>
         <canvas id="ripple-canvas"></canvas>
@@ -167,6 +164,58 @@
 <button id="fullscreen-toggle" class="fullscreen-btn hidden" onclick="toggleFullScreen()">退出全屏 ⛶</button>
 
 <script>
+    const SoundManager = {
+        ctx: null,
+        init() {
+            if (!this.ctx) {
+                this.ctx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (this.ctx.state === 'suspended') {
+                this.ctx.resume();
+            }
+        },
+        play(type) {
+            if (!this.ctx) return;
+            const t = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+            
+            switch(type) {
+                case 'start':
+                    osc.type = 'sine'; osc.frequency.setValueAtTime(523.25, t);
+                    osc.frequency.exponentialRampToValueAtTime(1046.5, t + 0.2);
+                    gain.gain.setValueAtTime(0.3, t); gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+                    osc.start(t); osc.stop(t + 0.3);
+                    break;
+                case 'correct':
+                    osc.type = 'triangle'; osc.frequency.setValueAtTime(600, t);
+                    osc.frequency.exponentialRampToValueAtTime(1200, t + 0.1);
+                    gain.gain.setValueAtTime(0.2, t); gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+                    osc.start(t); osc.stop(t + 0.2);
+                    break;
+                case 'wrong':
+                    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, t);
+                    osc.frequency.exponentialRampToValueAtTime(80, t + 0.2);
+                    gain.gain.setValueAtTime(0.2, t); gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+                    osc.start(t); osc.stop(t + 0.3);
+                    break;
+                case 'success':
+                    osc.type = 'square'; osc.frequency.setValueAtTime(400, t);
+                    gain.gain.setValueAtTime(0.1, t); gain.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
+                    osc.start(t); osc.stop(t + 0.3);
+                    break;
+                case 'gameover':
+                    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(300, t);
+                    osc.frequency.exponentialRampToValueAtTime(50, t + 0.8);
+                    gain.gain.setValueAtTime(0.3, t); gain.gain.linearRampToValueAtTime(0, t + 1);
+                    osc.start(t); osc.stop(t + 1);
+                    break;
+            }
+        }
+    };
+
     const easyMissions = [
         { type: "easy", vis: {top:{pt:[0, 12], name:"A"}, foot:{pt:[0, 0], name:"C"}, ref:{pt:[5, 0], name:"B"}}, ratioMath: "\\cos B", steps: {num:"adj", den:"hyp"}, data: {opp:"12", adj:"5", hyp:"13"} },
         { type: "easy", vis: {top:{pt:[0, 15], name:"A"}, foot:{pt:[0, 0], name:"C"}, ref:{pt:[-8, 0], name:"B"}}, ratioMath: "\\tan B", steps: {num:"opp", den:"adj"}, data: {opp:"15", adj:"8", hyp:"17"} },
@@ -183,7 +232,7 @@
     const stepNames = { "opp": "对边", "adj": "邻边", "hyp": "斜边" };
 
     let gameState = "MENU"; 
-    let gameMode = "30s"; // 新增：記錄遊戲模式
+    let gameMode = "30s"; 
     let currentPlayer = "神秘挑战者";
     let score = 0; let combo = 0; let wrongCombo = 0;
     let timeLeft = 30.0; let timerInterval;
@@ -218,7 +267,6 @@
         }
     }
 
-    /* === 新增：佈局切換與自動環境檢測 === */
     function setLayout(mode) {
         const wrapper = document.getElementById('main-wrapper');
         const btnP = document.getElementById('btn-portrait');
@@ -232,7 +280,7 @@
             btnL.classList.add('active-layout');
             btnP.classList.remove('active-layout');
         }
-        setTimeout(adaptCanvas, 50); // 切換佈局後強制重繪畫布
+        setTimeout(adaptCanvas, 50); 
     }
 
     function checkDeviceLayout() {
@@ -290,7 +338,7 @@
         rCanvas = document.getElementById('ripple-canvas'); rCtx = rCanvas.getContext('2d');
         
         window.addEventListener('resize', () => { adaptCanvas(); checkDeviceLayout(); });
-        checkDeviceLayout(); // 初始化檢測設備以套用佈局
+        checkDeviceLayout(); 
         adaptCanvas(); 
         
         const pane = document.getElementById('geometry-pane');
@@ -302,7 +350,7 @@
         pane.addEventListener('touchmove', (e) => { e.preventDefault(); }, {passive: false});
 
         document.getElementById('player-name').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') startGame('30s'); // 預設 Enter 進入 30秒模式
+            if (e.key === 'Enter') startGame('30s'); 
         });
     };
 
@@ -315,8 +363,10 @@
         if(gameState === "SELECTION_PHASE" || gameState === "DRAWING_PHASE") drawGeometry();
     }
 
-    /* === 修訂：適配雙模式邏輯 === */
     function startGame(mode = '30s') {
+        SoundManager.init(); 
+        SoundManager.play('start'); 
+        
         gameMode = mode;
         enterFullScreen();
         document.getElementById('fullscreen-toggle').classList.remove('hidden');
@@ -327,6 +377,7 @@
         document.getElementById('player-display').innerText = `玩家: ${currentPlayer}${modeLabel}`;
 
         document.getElementById("start-screen").classList.add("hidden");
+        document.getElementById("main-wrapper").classList.remove("hidden");
         score = 0; combo = 0; wrongCombo = 0; 
         
         timeLeft = gameMode === '30s' ? 30.0 : 0;
@@ -355,7 +406,6 @@
 
                 if(timeLeft <= 0) endGame();
             } else {
-                // 練習模式不扣時，顯示無限
                 document.getElementById("timer-display").innerText = "∞";
                 document.getElementById("timer-display").classList.remove("timer-warning");
             }
@@ -644,6 +694,7 @@
     }
 
     function handlePenalty() {
+        SoundManager.play('wrong'); 
         wrongCombo++; combo = 0; isHardMode = false; 
         
         let penalty = 100 * Math.pow(2, wrongCombo - 1);
@@ -736,6 +787,7 @@
         }
 
         if (matched) {
+            SoundManager.play('correct'); 
             combo++; wrongCombo = 0;
             score += 100 * combo;
             
@@ -748,6 +800,7 @@
             showFloatingText(combo > 3 ? "GODLIKE!" : "NICE!", "#10B981");
 
             if (numFilled && denFilled) {
+                SoundManager.play('success'); 
                 gameState = "SUCCESS";
                 document.getElementById("instruction").innerText = "✨ 建构完成！ ✨";
                 document.getElementById("geometry-pane").classList.add("main-success");
@@ -773,7 +826,6 @@
 
     function saveAndGetLeaderboard() {
         let board = JSON.parse(localStorage.getItem('trigClassroomBoard')) || [];
-        // 如果是練習模式，不寫入排行榜
         if (gameMode !== 'practice') {
             board.push({ name: currentPlayer, score: score });
             board.sort((a, b) => b.score - a.score);
@@ -784,6 +836,7 @@
     }
 
     function endGame() {
+        SoundManager.play('gameover'); 
         clearInterval(timerInterval);
         gameState = "GAMEOVER";
         
