@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>決勝三角比 0329 v1</title>
+    <title>三角比建构者</title>
     <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
     <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
     <style>
@@ -87,10 +87,12 @@
         .fullscreen-btn { position: fixed; top: 20px; right: 20px; background: rgba(15, 23, 42, 0.8); border: 2px solid #475569; color: var(--light); padding: 12px 24px; border-radius: 12px; cursor: pointer; font-size: 1.8rem; font-weight: bold; z-index: 1000; transition: all 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         .fullscreen-btn:hover { border-color: var(--accent); color: var(--accent); transform: scale(1.05); }
 
+        /* === 新增：竪屏模式與控制面板樣式 === */
         .controls-top-left { position: fixed; top: 20px; left: 20px; z-index: 1000; display: flex; gap: 15px; }
         .layout-btn { background: rgba(15, 23, 42, 0.8); border: 2px solid #475569; color: var(--light); padding: 12px 24px; border-radius: 12px; cursor: pointer; font-size: 1.8rem; font-weight: bold; transition: all 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
         .layout-btn.active-layout { border-color: var(--accent); color: var(--accent); }
 
+        /* 竪屏版面排版邏輯：可視化在上，數據在下 */
         .game-wrapper.portrait { flex-direction: column; }
         .game-wrapper.portrait .geometry-pane { flex: 1.3; border-right: none; border-bottom: 4px solid #334155; width: 100%; }
         .game-wrapper.portrait .info-pane { flex: 1; border-left: none; width: 100%; padding: 20px; flex-direction: row; gap: 20px; overflow-y: auto;}
@@ -165,68 +167,6 @@
 <button id="fullscreen-toggle" class="fullscreen-btn hidden" onclick="toggleFullScreen()">退出全屏 ⛶</button>
 
 <script>
-    // === Web Audio API 初始化與合成器邏輯 ===
-    let audioCtx = null;
-
-    function initAudio() {
-        if (!audioCtx) {
-            const AudioContext = window.AudioContext || window.webkitAudioContext;
-            audioCtx = new AudioContext();
-        }
-        if (audioCtx.state === 'suspended') {
-            audioCtx.resume();
-        }
-    }
-
-    function playRitualSound(type) {
-        if (!audioCtx) return;
-        const t = audioCtx.currentTime;
-        const osc = audioCtx.createOscillator();
-        const gainNode = audioCtx.createGain();
-        osc.connect(gainNode);
-        gainNode.connect(audioCtx.destination);
-
-        if (type === 'success') {
-            // 清脆高頻音 (如水晶滴答)
-            osc.type = 'sine';
-            osc.frequency.setValueAtTime(880, t); 
-            osc.frequency.exponentialRampToValueAtTime(1200, t + 0.1);
-            gainNode.gain.setValueAtTime(0.5, t);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
-            osc.start(t);
-            osc.stop(t + 0.3);
-        } else if (type === 'error') {
-            // 沉悶低頻音 (如警示嗡鳴)
-            osc.type = 'sawtooth';
-            osc.frequency.setValueAtTime(150, t);
-            osc.frequency.exponentialRampToValueAtTime(80, t + 0.3);
-            gainNode.gain.setValueAtTime(0.4, t);
-            gainNode.gain.exponentialRampToValueAtTime(0.01, t + 0.3);
-            osc.start(t);
-            osc.stop(t + 0.3);
-        } else if (type === 'godlike') {
-            // 深沉鐘鳴殘響 (儀式感核心)
-            osc.type = 'triangle';
-            osc.frequency.setValueAtTime(200, t);
-            osc.frequency.exponentialRampToValueAtTime(50, t + 2.5);
-            gainNode.gain.setValueAtTime(0.8, t);
-            gainNode.gain.exponentialRampToValueAtTime(0.001, t + 2.5);
-            osc.start(t);
-            osc.stop(t + 2.5);
-        }
-    }
-
-    // === 安全的跨平台震動調用封裝 ===
-    function triggerVibration(pattern) {
-        if (navigator.vibrate) {
-            try {
-                navigator.vibrate(pattern);
-            } catch (e) {
-                // 靜默捕捉特定環境下的權限錯誤
-            }
-        }
-    }
-
     const easyMissions = [
         { type: "easy", vis: {top:{pt:[0, 12], name:"A"}, foot:{pt:[0, 0], name:"C"}, ref:{pt:[5, 0], name:"B"}}, ratioMath: "\\cos B", steps: {num:"adj", den:"hyp"}, data: {opp:"12", adj:"5", hyp:"13"} },
         { type: "easy", vis: {top:{pt:[0, 15], name:"A"}, foot:{pt:[0, 0], name:"C"}, ref:{pt:[-8, 0], name:"B"}}, ratioMath: "\\tan B", steps: {num:"opp", den:"adj"}, data: {opp:"15", adj:"8", hyp:"17"} },
@@ -243,7 +183,7 @@
     const stepNames = { "opp": "对边", "adj": "邻边", "hyp": "斜边" };
 
     let gameState = "MENU"; 
-    let gameMode = "30s"; 
+    let gameMode = "30s"; // 新增：記錄遊戲模式
     let currentPlayer = "神秘挑战者";
     let score = 0; let combo = 0; let wrongCombo = 0;
     let timeLeft = 30.0; let timerInterval;
@@ -278,6 +218,7 @@
         }
     }
 
+    /* === 新增：佈局切換與自動環境檢測 === */
     function setLayout(mode) {
         const wrapper = document.getElementById('main-wrapper');
         const btnP = document.getElementById('btn-portrait');
@@ -291,7 +232,7 @@
             btnL.classList.add('active-layout');
             btnP.classList.remove('active-layout');
         }
-        setTimeout(adaptCanvas, 50); 
+        setTimeout(adaptCanvas, 50); // 切換佈局後強制重繪畫布
     }
 
     function checkDeviceLayout() {
@@ -349,7 +290,7 @@
         rCanvas = document.getElementById('ripple-canvas'); rCtx = rCanvas.getContext('2d');
         
         window.addEventListener('resize', () => { adaptCanvas(); checkDeviceLayout(); });
-        checkDeviceLayout(); 
+        checkDeviceLayout(); // 初始化檢測設備以套用佈局
         adaptCanvas(); 
         
         const pane = document.getElementById('geometry-pane');
@@ -361,7 +302,7 @@
         pane.addEventListener('touchmove', (e) => { e.preventDefault(); }, {passive: false});
 
         document.getElementById('player-name').addEventListener('keypress', function (e) {
-            if (e.key === 'Enter') startGame('30s'); 
+            if (e.key === 'Enter') startGame('30s'); // 預設 Enter 進入 30秒模式
         });
     };
 
@@ -374,11 +315,8 @@
         if(gameState === "SELECTION_PHASE" || gameState === "DRAWING_PHASE") drawGeometry();
     }
 
+    /* === 修訂：適配雙模式邏輯 === */
     function startGame(mode = '30s') {
-        initAudio(); // 啟動音頻上下文
-        playRitualSound('success'); // 開局提示音
-        triggerVibration(50);
-
         gameMode = mode;
         enterFullScreen();
         document.getElementById('fullscreen-toggle').classList.remove('hidden');
@@ -417,6 +355,7 @@
 
                 if(timeLeft <= 0) endGame();
             } else {
+                // 練習模式不扣時，顯示無限
                 document.getElementById("timer-display").innerText = "∞";
                 document.getElementById("timer-display").classList.remove("timer-warning");
             }
@@ -522,8 +461,6 @@
                 const targetFoot = ctx.renderData.pD;
                 createExplosion(targetFoot.x, targetFoot.y);
                 showFloatingText("NICE LINE!", "#FACC15");
-                playRitualSound('success');
-                triggerVibration([30, 50, 30]);
                 
                 gameState = "SELECTION_PHASE";
                 document.getElementById("formula-zone").classList.remove("locked");
@@ -708,8 +645,6 @@
 
     function handlePenalty() {
         wrongCombo++; combo = 0; isHardMode = false; 
-        playRitualSound('error');
-        triggerVibration([150, 50, 150]); // 較強烈的錯誤震動提示
         
         let penalty = 100 * Math.pow(2, wrongCombo - 1);
         score = Math.max(0, score - penalty);
@@ -732,8 +667,6 @@
         try {
             if (combo >= 3 && !isHardMode) {
                 isHardMode = true;
-                playRitualSound('godlike'); // 觸發沉重的鐘聲儀式音效
-                triggerVibration([200, 100, 200, 100, 400]);
                 document.getElementById("level-up-banner").classList.add("show");
                 setTimeout(()=> document.getElementById("level-up-banner").classList.remove("show"), 1500);
             }
@@ -812,16 +745,7 @@
 
             const paneRect = document.getElementById("geometry-pane").getBoundingClientRect();
             createExplosion(paneRect.width/2, paneRect.height/2);
-            
-            if (combo > 3) {
-                showFloatingText("GODLIKE!", "#10B981");
-                playRitualSound('success');
-                triggerVibration([50, 50, 50]);
-            } else {
-                showFloatingText("NICE!", "#10B981");
-                playRitualSound('success');
-                triggerVibration(40);
-            }
+            showFloatingText(combo > 3 ? "GODLIKE!" : "NICE!", "#10B981");
 
             if (numFilled && denFilled) {
                 gameState = "SUCCESS";
@@ -849,6 +773,7 @@
 
     function saveAndGetLeaderboard() {
         let board = JSON.parse(localStorage.getItem('trigClassroomBoard')) || [];
+        // 如果是練習模式，不寫入排行榜
         if (gameMode !== 'practice') {
             board.push({ name: currentPlayer, score: score });
             board.sort((a, b) => b.score - a.score);
@@ -862,9 +787,6 @@
         clearInterval(timerInterval);
         gameState = "GAMEOVER";
         
-        playRitualSound('godlike'); // 遊戲結束時播放鐘聲結尾
-        triggerVibration([500, 200, 500]);
-
         const board = saveAndGetLeaderboard();
         
         let boardHTML = `<div class="leaderboard-box">
