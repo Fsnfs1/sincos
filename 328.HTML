@@ -4,9 +4,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>三角比建构者 222</title>
-    <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
-    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <title>1212122222222222222</title>
+    <script src="https://cdn.staticfile.net/babel-polyfill/7.12.1/polyfill.min.js"></script>
+    <script id="MathJax-script" async src="https://cdn.staticfile.net/mathjax/3.2.2/es5/tex-mml-chtml.js"></script>
     <style>
         :root {
             --primary: #3B82F6; --success: #10B981; --danger: #EF4444; 
@@ -27,8 +27,8 @@
         #ripple-canvas { z-index: 3; pointer-events: none; }
 
         .q-floating-header { position: absolute; top: 30px; left: 0; width: 100%; z-index: 10; display: flex; flex-direction: column; align-items: center; pointer-events: none; transition: transform 0.3s; }
-        .question-stem { font-size: 3.5rem; font-weight: bold; background: rgba(3, 7, 18, 0.9); padding: 18px 55px; border-radius: 20px; border: 3px solid #475569; box-shadow: 0 12px 35px rgba(0,0,0,0.6); text-shadow: 0 0 15px var(--light); }
-        .instruction-text { font-size: 2.2rem; color: var(--accent); margin-top: 15px; font-weight: bold; text-shadow: 0 0 10px rgba(250,204,21,0.5); padding: 5px 25px; background: rgba(0,0,0,0.6); border-radius: 12px;}
+        .question-stem { font-size: 3.5rem; font-weight: bold; background: rgba(3, 7, 18, 0.9); padding: 18px 55px; border-radius: 20px; border: 3px solid #475569; box-shadow: 0 12px 35px rgba(0,0,0,0.6); text-shadow: 0 0 15px var(--light); min-height: 60px; }
+        .instruction-text { font-size: 2.2rem; color: var(--accent); margin-top: 15px; font-weight: bold; text-shadow: 0 0 10px rgba(250,204,21,0.5); padding: 5px 25px; background: rgba(0,0,0,0.6); border-radius: 12px; min-height: 35px;}
 
         .level-up-banner { position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0.5); font-size: 5rem; font-weight: bold; color: var(--accent); text-shadow: 0 0 40px var(--accent); z-index: 50; opacity: 0; pointer-events: none; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); background: rgba(0,0,0,0.8); padding: 20px 40px; border-radius: 20px; border: 4px solid var(--accent); white-space: nowrap;}
         .level-up-banner.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
@@ -64,7 +64,7 @@
         .main-error { animation: bgShake 0.35s ease-in-out both; border-right: 15px solid var(--danger) !important; box-shadow: inset 0 0 250px rgba(239,68,68,0.7) !important; }
         .main-success { border-right: 15px solid var(--success); box-shadow: inset 0 0 150px rgba(16,185,129,0.3); transition: all 0.3s; }
 
-        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(7, 11, 20, 0.99); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(15px); }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(7, 11, 20, 0.99); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 100; -webkit-backdrop-filter: blur(15px); backdrop-filter: blur(15px); }
         .hidden { display: none !important; }
         
         .player-input { font-size: 2.5rem; padding: 20px 40px; border-radius: 20px; border: 4px solid #475569; background: rgba(15,23,42,0.8); color: var(--light); text-align: center; margin-top: 40px; width: 500px; outline: none; }
@@ -127,8 +127,8 @@
         <canvas id="particle-canvas"></canvas>
         <canvas id="ripple-canvas"></canvas>
         <div class="q-floating-header">
-            <div class="question-stem" id="question-text">载入中...</div>
-            <div class="instruction-text" id="instruction">准备中...</div>
+            <div class="question-stem" id="question-text"></div>
+            <div class="instruction-text" id="instruction"></div>
         </div>
         <div class="level-up-banner" id="level-up-banner">🚀 难度升级：向下滑动画出高线！</div>
         <div class="viz-layer">
@@ -253,17 +253,15 @@
     let ripples = [];
 
     function setGameScale(targetScale) {
-        const root = document.documentElement;
         if (targetScale === 1) {
-            root.style.transform = "none";
-            root.style.width = "100%";
-            root.style.height = "100%";
+            document.body.style.zoom = "1";
+            document.body.style.transform = "none";
         } else {
-            const invScale = 100 / targetScale;
-            root.style.transform = `scale(${targetScale})`;
-            root.style.transformOrigin = "top left";
-            root.style.width = `${invScale}vw`;
-            root.style.height = `${invScale}vh`;
+            document.body.style.zoom = targetScale;
+            if (navigator.userAgent.toLowerCase().indexOf('firefox') > -1) {
+                document.body.style.transform = `scale(${targetScale})`;
+                document.body.style.transformOrigin = "top left";
+            }
         }
     }
 
@@ -330,9 +328,8 @@
     document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
     document.addEventListener('msfullscreenchange', handleFullscreenChange);
 
-    window.onload = () => {
+    function initSystem() {
         setGameScale(0.33);
-
         canvas = document.getElementById('main-canvas'); ctx = canvas.getContext('2d');
         pCanvas = document.getElementById('particle-canvas'); pCtx = pCanvas.getContext('2d');
         rCanvas = document.getElementById('ripple-canvas'); rCtx = rCanvas.getContext('2d');
@@ -352,7 +349,8 @@
         document.getElementById('player-name').addEventListener('keypress', function (e) {
             if (e.key === 'Enter') startGame('30s'); 
         });
-    };
+    }
+    initSystem();
 
     function adaptCanvas() {
         const pane = document.getElementById('geometry-pane');
