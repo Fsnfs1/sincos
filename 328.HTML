@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="三角比建构">
     
-    <title>三角比建构者330</title>
+    <title>三角比建构者 - 本地离线版</title>
 
     <script id="MathJax-script" async src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-mml-chtml.min.js"></script>
 
@@ -31,10 +31,10 @@
         #particle-canvas { z-index: 2; pointer-events: none; }
         #ripple-canvas { z-index: 3; pointer-events: none; }
 
-        /* 修订：提示区域排版紧凑化，上边缘固定 */
+        /* 头部题目区域紧凑化 */
         .q-floating-header { 
             position: absolute; 
-            top: 45px; 
+            top: 40px; 
             left: 50%;
             transform: translateX(-50%);
             width: 95%; 
@@ -68,29 +68,13 @@
             text-align: center;
         }
 
-        /* 修订：难度升级横幅彻底缩小并允许自动换行，防止遮挡全屏 */
         .level-up-banner { 
-            position: absolute; 
-            top: 40%; 
-            left: 50%; 
-            transform: translate(-50%, -50%) scale(0.5); 
-            font-size: clamp(1.2rem, 5vw, 2.5rem); 
-            font-weight: bold; 
-            color: var(--accent); 
-            text-shadow: 0 0 20px rgba(250,204,21,0.5); 
-            z-index: 50; 
-            opacity: 0; 
-            pointer-events: none; 
-            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
-            background: rgba(0,0,0,0.85); 
-            padding: 10px 20px; 
-            border-radius: 15px; 
-            border: 3px solid var(--accent); 
-            width: 85%;
-            max-width: 450px;
-            text-align: center;
-            white-space: normal; /* 允许换行 */
-            line-height: 1.4;
+            position: absolute; top: 40%; left: 50%; transform: translate(-50%, -50%) scale(0.5); 
+            font-size: clamp(1.2rem, 5vw, 2.5rem); font-weight: bold; color: var(--accent); 
+            text-shadow: 0 0 20px rgba(250,204,21,0.5); z-index: 50; opacity: 0; pointer-events: none; 
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); background: rgba(0,0,0,0.85); 
+            padding: 10px 20px; border-radius: 15px; border: 3px solid var(--accent); width: 85%;
+            max-width: 450px; text-align: center; white-space: normal; line-height: 1.4;
         }
         .level-up-banner.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
 
@@ -98,10 +82,24 @@
 
         .info-card { background: rgba(255,255,255,0.03); border: 3px solid #334155; border-radius: 20px; padding: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.4); margin-bottom: 20px;}
         .player-info { font-size: clamp(1.1rem, 1.5vw, 1.5rem); color: #94A3B8; margin-bottom: 10px; font-weight: bold; }
-        .score-box { font-size: clamp(1.5rem, 3vw, 2.5rem); color: var(--accent); font-weight: bold; font-family: monospace; }
-        .combo-box { font-size: clamp(1.2rem, 2vw, 1.8rem); color: var(--glowing-cyan); font-style: italic; opacity: 0; transition: opacity 0.2s, transform 0.2s; margin-top: 5px; }
-        .combo-box.show { opacity: 1; transform: scale(1.1); }
-        .penalty-box { font-size: clamp(1rem, 1.5vw, 1.5rem); color: var(--danger); font-weight: bold; opacity: 0; margin-top: 5px; transition: opacity 0.2s;}
+        
+        .score-box { font-size: clamp(1.5rem, 3vw, 2.5rem); color: var(--accent); font-weight: bold; font-family: monospace; position: relative;}
+        
+        /* 核心修复：彻底解决“幽灵占位”，使用绝对定位悬浮，还三角形生存空间！ */
+        .combo-box { 
+            font-size: clamp(1rem, 2vw, 1.5rem); color: var(--glowing-cyan); font-style: italic; 
+            opacity: 0; transition: opacity 0.2s, transform 0.2s; 
+            position: absolute; bottom: 100%; right: 0; margin-bottom: 5px; 
+            white-space: nowrap; pointer-events: none;
+        }
+        .combo-box.show { opacity: 1; transform: scale(1.1) translateY(-2px); }
+        
+        .penalty-box { 
+            font-size: clamp(0.9rem, 1.5vw, 1.3rem); color: var(--danger); font-weight: bold; 
+            opacity: 0; transition: opacity 0.2s; 
+            position: absolute; bottom: 100%; right: 0; margin-bottom: 5px; 
+            white-space: nowrap; pointer-events: none;
+        }
         .penalty-box.show { opacity: 1; }
 
         .timer-box { font-size: clamp(2rem, 4vw, 3.5rem); color: var(--success); font-weight: bold; font-family: monospace; text-shadow: 0 0 20px rgba(16,185,129,0.5); margin-top: 5px;}
@@ -159,18 +157,10 @@
         
         .game-wrapper.portrait .formula-zone { position: relative !important; margin: 0; width: 100%; height: 100%; box-sizing: border-box; }
 
+        /* 竖屏下记分板样式重置与绝对定位定位 */
         .geometry-pane #stats-card {
-            position: absolute;
-            bottom: 10px;
-            left: 0;
-            width: 100%;
-            background: transparent;
-            border: none;
-            box-shadow: none;
-            padding: 0 25px;
-            margin: 0;
-            z-index: 20;
-            box-sizing: border-box;
+            position: absolute; bottom: 15px; left: 0; width: 100%; background: transparent;
+            border: none; box-shadow: none; padding: 0 25px; margin: 0; z-index: 20; box-sizing: border-box;
         }
         .geometry-pane #stats-card .player-info,
         .geometry-pane #stats-card .hr-divider { display: none; }
@@ -178,9 +168,8 @@
             display: flex; flex-direction: row; justify-content: space-between; align-items: flex-end; width: 100%;
         }
         .geometry-pane #stats-card .stat-left { text-align: left; }
-        .geometry-pane #stats-card .stat-right { text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
-        .geometry-pane #stats-card .timer-box { text-shadow: 0 0 10px rgba(0,0,0,0.8); }
-        .geometry-pane #stats-card .score-box { text-shadow: 0 0 10px rgba(0,0,0,0.8); }
+        .geometry-pane #stats-card .stat-right { position: relative; text-align: right; display: flex; flex-direction: column; align-items: flex-end; }
+        .geometry-pane #stats-card .timer-box, .geometry-pane #stats-card .score-box { text-shadow: 0 0 10px rgba(0,0,0,0.8); margin: 0;}
 
     </style>
 </head>
@@ -231,9 +220,9 @@
                 </div>
                 <div class="hr-divider" style="height: 2px; background: #334155; margin: 15px 0;"></div>
                 <div class="stat-right">
-                    <div class="score-box">分数: <span id="score-display">0</span></div>
                     <div class="combo-box" id="combo-display">x1 Combo!</div>
                     <div class="penalty-box" id="penalty-display">连错惩罚: -100</div>
+                    <div class="score-box">分数: <span id="score-display">0</span></div>
                 </div>
             </div>
         </div>
@@ -504,35 +493,29 @@
         if (bestEdge) handleEdgeSelection(bestEdge.id);
     }
 
-    // 核心重构：精确扣除文本与计分板物理高度，100% 把剩余空间还给三角形
+    // ==========================================
+    // 核心大修：彻底解放空间，硬编码保证安全渲染区域
+    // ==========================================
     function drawGeometry() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const data = currentMission.vis;
-        
-        // 动态侦测顶部提示组件的高度
-        const headerEl = document.querySelector('.q-floating-header');
-        const headerHeight = headerEl ? headerEl.offsetHeight : 80;
         const isPortrait = document.getElementById('main-wrapper').classList.contains('portrait');
         
-        // 动态计算绝对安全的顶部/底部边界
-        const topSafeZone = 50 + headerHeight + 15; // 顶部组件绝对定位在 45px，因此留出组件高度 + 缓冲空间
-        const statsEl = document.getElementById('stats-card');
-        const statsHeight = statsEl ? statsEl.offsetHeight : 60;
-        const bottomSafeZone = isPortrait ? (statsHeight + 15) : Math.max(60, canvas.height * 0.1);
+        // 摒弃读取 DOM 造成的不稳定反馈，直接按照屏幕高度硬编码切分画版
+        const topSafeZone = isPortrait ? 110 : 80;  // 顶部给题干预留的绝对像素
+        const bottomSafeZone = isPortrait ? 80 : 50; // 底部给计分板预留的绝对像素
+        const sideSafeZone = Math.max(20, canvas.width * 0.08); // 边缘给标签预留的绝对宽度
         
-        const sideSafeZone = Math.max(20, canvas.width * 0.08); // 留出左右边距给文字标签
-        
-        const drawW = canvas.width - sideSafeZone * 2;
-        const drawH = canvas.height - topSafeZone - bottomSafeZone;
+        const drawW = Math.max(10, canvas.width - sideSafeZone * 2);
+        const drawH = Math.max(10, canvas.height - topSafeZone - bottomSafeZone);
         
         const pts = [data.top.pt, data.foot.pt, data.ref.pt]; if(data.other) pts.push(data.other.pt);
         const minX = Math.min(...pts.map(p => p[0])); const maxX = Math.max(...pts.map(p => p[0])); 
         const minY = Math.min(...pts.map(p => p[1])); const maxY = Math.max(...pts.map(p => p[1]));
         
-        // 缩放比设定为0.88，保留边缘给A/B/C等外部标签
-        const scale = Math.min(drawW / (maxX - minX), drawH / (maxY - minY)) * 0.88; 
+        // 放大倍率推到 0.95，尽可能占满可用空间
+        const scale = Math.min(drawW / (maxX - minX), drawH / (maxY - minY)) * 0.95;
         
-        // 动态锚点居中对齐，严格限定在安全区中心
         const toScreen = (pt) => ({ 
             x: canvas.width/2 + (pt[0] - (minX+maxX)/2) * scale, 
             y: topSafeZone + drawH/2 - (pt[1] - (minY+maxY)/2) * scale 
@@ -542,43 +525,56 @@
         ctx.renderData = { pA, pD, pRef, scale };
         
         ctx.fillStyle = "rgba(59, 130, 246, 0.04)"; ctx.beginPath(); ctx.moveTo(pA.x, pA.y); ctx.lineTo(pRef.x, pRef.y); if(pOther) ctx.lineTo(pOther.x, pOther.y); else ctx.lineTo(pD.x, pD.y); ctx.closePath(); ctx.fill();
-        ctx.strokeStyle = "rgba(148, 163, 184, 0.9)"; ctx.lineWidth = Math.max(4, canvas.width * 0.012); ctx.lineCap = "round"; ctx.lineJoin = "round";
+        ctx.strokeStyle = "rgba(148, 163, 184, 0.9)"; ctx.lineWidth = Math.max(3, canvas.width * 0.01); ctx.lineCap = "round"; ctx.lineJoin = "round";
         ctx.beginPath(); ctx.moveTo(pA.x, pA.y); ctx.lineTo(pRef.x, pRef.y); if(pOther) ctx.lineTo(pOther.x, pOther.y); else ctx.lineTo(pD.x, pD.y); ctx.closePath(); ctx.stroke();
 
-        const rightAngleSize = Math.max(15, canvas.width * 0.035);
+        const rightAngleSize = Math.max(12, Math.min(20, scale * 0.15));
         if (currentMission.type === "hard") {
-            if (data.ref.pt[0] * data.other.pt[0] > 0) { ctx.strokeStyle = "rgba(148, 163, 184, 0.5)"; ctx.lineWidth = Math.max(3, canvas.width * 0.008); ctx.setLineDash([8, 8]); ctx.beginPath(); ctx.moveTo(pD.x, pD.y); const innerPoint = Math.abs(data.ref.pt[0]) < Math.abs(data.other.pt[0]) ? pRef : pOther; ctx.lineTo(innerPoint.x, innerPoint.y); ctx.stroke(); ctx.setLineDash([]); }
-            if (gameState === "DRAWING_PHASE") { ctx.beginPath(); ctx.arc(pA.x, pA.y, rightAngleSize*1.5, 0, Math.PI*2); ctx.fillStyle = "rgba(250, 204, 21, 0.3)"; ctx.fill(); ctx.lineWidth = Math.max(3, canvas.width * 0.008); ctx.strokeStyle = "#FACC15"; ctx.stroke(); } 
-            else if (gameState === "SELECTION_PHASE") { ctx.strokeStyle = "#10B981"; ctx.lineWidth = Math.max(5, canvas.width * 0.01); ctx.setLineDash([12, 12]); ctx.beginPath(); ctx.moveTo(pA.x, pA.y); ctx.lineTo(pD.x, pD.y); ctx.stroke(); ctx.setLineDash([]); drawRightAngle(ctx, pD, pRef, pA, rightAngleSize); }
+            if (data.ref.pt[0] * data.other.pt[0] > 0) { ctx.strokeStyle = "rgba(148, 163, 184, 0.5)"; ctx.lineWidth = Math.max(2, canvas.width * 0.006); ctx.setLineDash([8, 8]); ctx.beginPath(); ctx.moveTo(pD.x, pD.y); const innerPoint = Math.abs(data.ref.pt[0]) < Math.abs(data.other.pt[0]) ? pRef : pOther; ctx.lineTo(innerPoint.x, innerPoint.y); ctx.stroke(); ctx.setLineDash([]); }
+            if (gameState === "DRAWING_PHASE") { ctx.beginPath(); ctx.arc(pA.x, pA.y, rightAngleSize*1.5, 0, Math.PI*2); ctx.fillStyle = "rgba(250, 204, 21, 0.3)"; ctx.fill(); ctx.lineWidth = Math.max(2, canvas.width * 0.006); ctx.strokeStyle = "#FACC15"; ctx.stroke(); } 
+            else if (gameState === "SELECTION_PHASE") { ctx.strokeStyle = "#10B981"; ctx.lineWidth = Math.max(4, canvas.width * 0.008); ctx.setLineDash([10, 10]); ctx.beginPath(); ctx.moveTo(pA.x, pA.y); ctx.lineTo(pD.x, pD.y); ctx.stroke(); ctx.setLineDash([]); drawRightAngle(ctx, pD, pRef, pA, rightAngleSize); }
         } else if (currentMission.type === "easy" && gameState === "SELECTION_PHASE") { drawRightAngle(ctx, pD, pRef, pA, rightAngleSize); }
 
         if (gameState === "SELECTION_PHASE") {
-            const refColorRgb = varToRgb("--accent"); ctx.strokeStyle = `rgba(${refColorRgb}, 1)`; ctx.fillStyle = `rgba(${refColorRgb}, 0.2)`; ctx.lineWidth = Math.max(4, canvas.width * 0.008);
-            const arcR = Math.max(30, canvas.width * 0.06); const angA = Math.atan2(pA.y - pRef.y, pA.x - pRef.x); const angD = Math.atan2(pD.y - pRef.y, pD.x - pRef.x);
+            const refColorRgb = varToRgb("--accent"); ctx.strokeStyle = `rgba(${refColorRgb}, 1)`; ctx.fillStyle = `rgba(${refColorRgb}, 0.2)`; ctx.lineWidth = Math.max(3, canvas.width * 0.006);
+            
+            // 智能圆弧：防止在锐角时圆弧半径过大吞噬小边
+            const d1 = Math.hypot(pA.x - pRef.x, pA.y - pRef.y);
+            const d2 = Math.hypot(pD.x - pRef.x, pD.y - pRef.y);
+            const arcR = Math.max(12, Math.min(35, Math.min(d1, d2) * 0.35)); 
+            
+            const angA = Math.atan2(pA.y - pRef.y, pA.x - pRef.x); const angD = Math.atan2(pD.y - pRef.y, pD.x - pRef.x);
             ctx.beginPath(); ctx.moveTo(pRef.x, pRef.y); ctx.arc(pRef.x, pRef.y, arcR, Math.min(angA, angD), Math.max(angA, angD)); ctx.closePath(); ctx.fill(); ctx.stroke();
         }
 
-        const labelOffset = Math.max(15, canvas.height * 0.04);
+        // 标签的偏移也随图形主缩放进行自适应
+        const labelOffset = Math.max(12, scale * 0.15); 
         drawVertexLabel(ctx, pA, data.top.name, 0, -labelOffset, "148, 163, 184"); drawVertexLabel(ctx, pRef, data.ref.name, 0, labelOffset, "148, 163, 184"); if(pOther) drawVertexLabel(ctx, pOther, data.other.name, 0, labelOffset, "148, 163, 184");
         
         if(gameState === "SELECTION_PHASE") {
-            if(currentMission.type === "hard") drawVertexLabel(ctx, pD, "D", 0, labelOffset*1.2, varToRgb("--success"));
+            if(currentMission.type === "hard") drawVertexLabel(ctx, pD, "D", 0, labelOffset, varToRgb("--success"));
             drawEdgeLabel(ctx, pA, pD, currentMission.data.opp); drawEdgeLabel(ctx, pD, pRef, currentMission.data.adj); drawEdgeLabel(ctx, pA, pRef, currentMission.data.hyp);
         } else if (currentMission.type === "easy") { drawVertexLabel(ctx, pD, data.foot.name, 0, labelOffset, "148, 163, 184"); }
 
         if(flashEdge) {
             let p1, p2; if(flashEdge.id === "opp") { p1 = pA; p2 = pD; } else if(flashEdge.id === "adj") { p1 = pD; p2 = pRef; } else { p1 = pA; p2 = pRef; }
-            ctx.strokeStyle = flashEdge.color; ctx.lineWidth = Math.max(8, canvas.width * 0.015); ctx.shadowColor = flashEdge.color; ctx.shadowBlur = Math.max(15, canvas.width * 0.03);
+            ctx.strokeStyle = flashEdge.color; ctx.lineWidth = Math.max(6, canvas.width * 0.015); ctx.shadowColor = flashEdge.color; ctx.shadowBlur = Math.max(15, canvas.width * 0.03);
             ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke(); ctx.shadowBlur = 0;
             if(Date.now() > flashEdge.timer) { flashEdge = null; drawGeometry(); } else { requestAnimationFrame(drawGeometry); }
         }
     }
 
-    function drawRightAngle(ctx, vertex, p1, p2, size) { const dx1 = Math.sign(p1.x - vertex.x) * size || 0, dy1 = Math.sign(p1.y - vertex.y) * size || 0; const dx2 = Math.sign(p2.x - vertex.x) * size || 0, dy2 = Math.sign(p2.y - vertex.y) * size || 0; ctx.strokeStyle = "rgba(148, 163, 184, 0.7)"; ctx.lineWidth = Math.max(3, ctx.canvas.width * 0.005); ctx.beginPath(); ctx.moveTo(vertex.x + dx1, vertex.y + dy1); ctx.lineTo(vertex.x + dx1 + dx2, vertex.y + dy1 + dy2); ctx.lineTo(vertex.x + dx2, vertex.y + dy2); ctx.stroke(); }
-    function drawVertexLabel(ctx, p, text, offX, offY, colorRgb) { const fSize = Math.max(18, ctx.canvas.width * 0.04); ctx.fillStyle = `rgba(${colorRgb}, 1)`; ctx.font = `bold ${fSize}px sans-serif`; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(text, p.x + offX, p.y + offY); }
+    function drawRightAngle(ctx, vertex, p1, p2, size) { const dx1 = Math.sign(p1.x - vertex.x) * size || 0, dy1 = Math.sign(p1.y - vertex.y) * size || 0; const dx2 = Math.sign(p2.x - vertex.x) * size || 0, dy2 = Math.sign(p2.y - vertex.y) * size || 0; ctx.strokeStyle = "rgba(148, 163, 184, 0.7)"; ctx.lineWidth = Math.max(2, ctx.canvas.width * 0.005); ctx.beginPath(); ctx.moveTo(vertex.x + dx1, vertex.y + dy1); ctx.lineTo(vertex.x + dx1 + dx2, vertex.y + dy1 + dy2); ctx.lineTo(vertex.x + dx2, vertex.y + dy2); ctx.stroke(); }
+    
+    function drawVertexLabel(ctx, p, text, offX, offY, colorRgb) { const fSize = Math.max(14, ctx.canvas.width * 0.035); ctx.fillStyle = `rgba(${colorRgb}, 1)`; ctx.font = `bold ${fSize}px sans-serif`; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(text, p.x + offX, p.y + offY); }
+    
+    // 微缩内边距以降低边长碰撞率
     function drawEdgeLabel(ctx, p1, p2, text) {
-        const mx = (p1.x + p2.x)/2; const my = (p1.y + p2.y)/2; const fSize = Math.max(14, ctx.canvas.width * 0.03); ctx.font = `bold ${fSize}px 'Segoe UI'`; const w = ctx.measureText(text).width;
-        const padX = fSize * 0.4, padY = fSize * 0.6; const bx = mx - w/2 - padX, by = my - fSize/2 - padY/2, bw = w + padX*2, bh = fSize + padY, br = Math.max(4, fSize*0.2);
+        const mx = (p1.x + p2.x)/2; const my = (p1.y + p2.y)/2; 
+        const fSize = Math.max(12, ctx.canvas.width * 0.035); ctx.font = `bold ${fSize}px 'Segoe UI'`; 
+        const w = ctx.measureText(text).width;
+        const padX = fSize * 0.3, padY = fSize * 0.3; 
+        const bx = mx - w/2 - padX, by = my - fSize/2 - padY, bw = w + padX*2, bh = fSize + padY*2, br = 6;
         ctx.fillStyle = "rgba(15, 23, 42, 0.85)"; ctx.beginPath();
         if (typeof ctx.roundRect === "function") { ctx.roundRect(bx, by, bw, bh, br); } else { ctx.moveTo(bx + br, by); ctx.lineTo(bx + bw - br, by); ctx.quadraticCurveTo(bx + bw, by, bx + bw, by + br); ctx.lineTo(bx + bw, by + bh - br); ctx.quadraticCurveTo(bx + bw, by + bh, bx + bw - br, by + bh); ctx.lineTo(bx + br, by + bh); ctx.quadraticCurveTo(bx, by + bh, bx, by + bh - br); ctx.lineTo(bx, by + br); ctx.quadraticCurveTo(bx, by, bx + br, by); }
         ctx.fill(); ctx.fillStyle = "#F8FAFC"; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(text, mx, my);
@@ -622,7 +618,7 @@
 
     function endGame() {
         try { SoundManager.stopBGM(); SoundManager.play('gameover'); } catch(e){} clearInterval(timerInterval); gameState = "GAMEOVER";
-        document.getElementById('btn-return').classList.add('hidden'); // 结束后隐藏返回按钮
+        document.getElementById('btn-return').classList.add('hidden');
 
         const board = saveAndGetLeaderboard(); let boardHTML = `<div class="leaderboard-box"><h2 style="color: var(--accent); font-size: clamp(2rem, 4vw, 3rem); margin-top: 0; margin-bottom: 20px; text-shadow: 0 0 20px var(--accent);">🏆 荣誉殿堂 🏆</h2><table class="leaderboard-table"><tr><th>排名</th><th>玩家</th><th>分数</th></tr>`;
         board.forEach((entry, idx) => { let rank = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : (idx === 2 ? '🥉' : idx + 1)); let highlight = (entry.name === currentPlayer && entry.score === score) ? 'class="current-player-rank"' : ''; boardHTML += `<tr ${highlight} style="animation: slideInRank 0.5s ease forwards; animation-delay: ${idx * 0.15}s; opacity: 0;"><td>${rank}</td><td>${entry.name}</td><td>${entry.score}</td></tr>`; }); boardHTML += `</table></div>`;
