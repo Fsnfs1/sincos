@@ -31,41 +31,23 @@
         #particle-canvas { z-index: 2; pointer-events: none; }
         #ripple-canvas { z-index: 3; pointer-events: none; }
 
-        /* 头部题目区域紧凑化 */
         .q-floating-header { 
-            position: absolute; 
-            top: 40px; 
-            left: 50%;
-            transform: translateX(-50%);
-            width: 95%; 
-            z-index: 10; 
-            display: flex; 
-            flex-direction: column; 
-            align-items: center; 
-            pointer-events: none; 
+            position: absolute; top: 40px; left: 50%; transform: translateX(-50%);
+            width: 95%; z-index: 10; display: flex; flex-direction: column; 
+            align-items: center; pointer-events: none; 
         }
         
         .question-stem { 
-            font-size: clamp(1.1rem, 2.5vw, 1.5rem); 
-            font-weight: bold; 
-            background: rgba(15, 23, 42, 0.9); 
-            padding: 6px 20px; 
-            border-radius: 12px; 
-            border: 2px solid #475569; 
-            box-shadow: 0 4px 15px rgba(0,0,0,0.4); 
-            color: var(--light);
-            text-align: center;
+            font-size: clamp(1.1rem, 2.5vw, 1.5rem); font-weight: bold; 
+            background: rgba(15, 23, 42, 0.9); padding: 6px 20px; 
+            border-radius: 12px; border: 2px solid #475569; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4); color: var(--light); text-align: center;
         }
         
         .instruction-text { 
-            font-size: clamp(0.9rem, 2vw, 1.2rem); 
-            color: var(--accent); 
-            margin-top: 5px; 
-            font-weight: bold; 
-            padding: 4px 15px; 
-            background: rgba(0,0,0,0.75); 
-            border-radius: 8px;
-            text-align: center;
+            font-size: clamp(0.9rem, 2vw, 1.2rem); color: var(--accent); margin-top: 5px; 
+            font-weight: bold; padding: 4px 15px; background: rgba(0,0,0,0.75); 
+            border-radius: 8px; text-align: center;
         }
 
         .level-up-banner { 
@@ -82,10 +64,8 @@
 
         .info-card { background: rgba(255,255,255,0.03); border: 3px solid #334155; border-radius: 20px; padding: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.4); margin-bottom: 20px;}
         .player-info { font-size: clamp(1.1rem, 1.5vw, 1.5rem); color: #94A3B8; margin-bottom: 10px; font-weight: bold; }
-        
         .score-box { font-size: clamp(1.5rem, 3vw, 2.5rem); color: var(--accent); font-weight: bold; font-family: monospace; position: relative;}
         
-        /* 核心修复：彻底解决“幽灵占位”，使用绝对定位悬浮，还三角形生存空间！ */
         .combo-box { 
             font-size: clamp(1rem, 2vw, 1.5rem); color: var(--glowing-cyan); font-style: italic; 
             opacity: 0; transition: opacity 0.2s, transform 0.2s; 
@@ -157,7 +137,6 @@
         
         .game-wrapper.portrait .formula-zone { position: relative !important; margin: 0; width: 100%; height: 100%; box-sizing: border-box; }
 
-        /* 竖屏下记分板样式重置与绝对定位定位 */
         .geometry-pane #stats-card {
             position: absolute; bottom: 15px; left: 0; width: 100%; background: transparent;
             border: none; box-shadow: none; padding: 0 25px; margin: 0; z-index: 20; box-sizing: border-box;
@@ -319,21 +298,78 @@
         }
     };
 
-    const easyMissions = [
-        { type: "easy", vis: {top:{pt:[0, 12], name:"A"}, foot:{pt:[0, 0], name:"C"}, ref:{pt:[5, 0], name:"B"}}, ratioMath: "\\cos B", steps: {num:"adj", den:"hyp"}, data: {opp:"12", adj:"5", hyp:"13"} },
-        { type: "easy", vis: {top:{pt:[0, 15], name:"A"}, foot:{pt:[0, 0], name:"C"}, ref:{pt:[-8, 0], name:"B"}}, ratioMath: "\\tan B", steps: {num:"opp", den:"adj"}, data: {opp:"15", adj:"8", hyp:"17"} },
-        { type: "easy", vis: {top:{pt:[0, 8], name:"B"}, foot:{pt:[0, 0], name:"A"}, ref:{pt:[15, 0], name:"C"}}, ratioMath: "\\sin C", steps: {num:"opp", den:"hyp"}, data: {opp:"8", adj:"15", hyp:"17"} }
-    ];
+    // ==========================================
+    // 核心重构：动态数学几何引擎 (全面随机化 + 智能辅助线排布)
+    // ==========================================
+    function generateMission(isHard) {
+        // 1. 无限随机勾股数引擎
+        const triples = [
+            [3,4,5], [4,3,5], [5,12,13], [12,5,13], 
+            [8,15,17], [15,8,17], [7,24,25], [24,7,25], 
+            [9,40,41], [20,21,29]
+        ];
+        const t = triples[Math.floor(Math.random() * triples.length)];
+        const opp = t[0], adj = t[1], hyp = t[2];
 
-    const hardMissions = [
-        { type: "hard", vis: {top:{pt:[0, 12], name:"A"}, foot:{pt:[0, 0], name:"D"}, ref:{pt:[-5, 0], name:"B"}, other:{pt:[9, 0], name:"C"}}, ratioMath: "\\sin B", steps: {num:"opp", den:"hyp"}, data: {opp:"12", adj:"5", hyp:"13"} },
-        { type: "hard", vis: {top:{pt:[0, 8], name:"A"}, foot:{pt:[0, 0], name:"D"}, ref:{pt:[15, 0], name:"C"}, other:{pt:[-6, 0], name:"B"}}, ratioMath: "\\cos C", steps: {num:"adj", den:"hyp"}, data: {opp:"8", adj:"15", hyp:"17"} },
-        { type: "hard", vis: {top:{pt:[0, 15], name:"A"}, foot:{pt:[0, 0], name:"D"}, ref:{pt:[20, 0], name:"C"}, other:{pt:[8, 0], name:"B"}}, ratioMath: "\\tan C", steps: {num:"opp", den:"adj"}, data: {opp:"15", adj:"20", hyp:"25"} },
-        { type: "hard", vis: {top:{pt:[0, 8], name:"A"}, foot:{pt:[0, 0], name:"D"}, ref:{pt:[-15, 0], name:"B"}, other:{pt:[-6, 0], name:"C"}}, ratioMath: "\\sin B", steps: {num:"opp", den:"hyp"}, data: {opp:"8", adj:"15", hyp:"17"} }
-    ];
+        // 2. 随机抽取三角函数
+        const funcs = [
+            { name: '\\sin', num: 'opp', den: 'hyp' },
+            { name: '\\cos', num: 'adj', den: 'hyp' },
+            { name: '\\tan', num: 'opp', den: 'adj' }
+        ];
+        const func = funcs[Math.floor(Math.random() * funcs.length)];
+
+        // 3. 随机映射顶点字母 (完美实现“辅助线画在不同边上”的视觉轮转)
+        const letters = ['A', 'B', 'C'];
+        for(let i = letters.length - 1; i > 0; i--){
+            const j = Math.floor(Math.random() * (i + 1));
+            [letters[i], letters[j]] = [letters[j], letters[i]];
+        }
+        const nameTop = letters[0], nameRef = letters[1], nameOther = letters[2];
+        const dir = Math.random() > 0.5 ? 1 : -1;
+
+        if (!isHard) {
+            return {
+                type: "easy",
+                vis: {
+                    top: { pt: [0, opp], name: nameTop },
+                    foot: { pt: [0, 0], name: nameOther },
+                    ref: { pt: [adj * dir, 0], name: nameRef }
+                },
+                ratioMath: `${func.name} ${nameRef}`,
+                steps: { num: func.num, den: func.den },
+                data: { opp: opp.toString(), adj: adj.toString(), hyp: hyp.toString() }
+            };
+        } else {
+            // 4. 智能生成锐角/钝角三角形体系 (保证求解角永远安全)
+            let otherX;
+            let absAdj = Math.abs(adj);
+            
+            // 为了视觉完美，决定高线到底是落在三角形内部(锐角)还是外部延长线上(钝角)
+            if (Math.random() > 0.5 || absAdj <= 3) {
+                // 锐角：另一个端点落在高线的反方向
+                otherX = -dir * (Math.random() * 1.5 + 0.5) * opp;
+            } else {
+                // 钝角：另一个端点落在高线的同方向，但比目标角更靠近垂足
+                otherX = dir * (Math.random() * (absAdj - 2) + 1);
+            }
+
+            return {
+                type: "hard",
+                vis: {
+                    top: { pt: [0, opp], name: nameTop },
+                    foot: { pt: [0, 0], name: 'D' }, // 垂足统一命名为D（安全不冲突）
+                    ref: { pt: [adj * dir, 0], name: nameRef },
+                    other: { pt: [otherX, 0], name: nameOther }
+                },
+                ratioMath: `${func.name} ${nameRef}`,
+                steps: { num: func.num, den: func.den },
+                data: { opp: opp.toString(), adj: adj.toString(), hyp: hyp.toString() }
+            };
+        }
+    }
 
     const stepNames = { "opp": "对边", "adj": "邻边", "hyp": "斜边" };
-
     let gameState = "MENU", gameMode = "30s", currentPlayer = "神秘挑战者", score = 0, combo = 0, wrongCombo = 0, timeLeft = 30.0, timerInterval, currentMission = null;
     let numFilled = false, denFilled = false, ctx, canvas, pCtx, pCanvas, rCtx, rCanvas, isHardMode = false, flashEdge = null;
     let isDragging = false, drawStartX = 0, drawStartY = 0, mouseX = 0, mouseY = 0, pointerDownTime = 0, pointerDownPos = {x:0, y:0}, ripples = [], particles = [], lastAuxLineSoundAt = 0, lastPointerClientX = 0, lastCountdownBeepSecond = -1;
@@ -494,17 +530,17 @@
     }
 
     // ==========================================
-    // 核心大修：彻底解放空间，硬编码保证安全渲染区域
+    // 核心重构：绝对安全的渲染空间 + 智能自适应
     // ==========================================
     function drawGeometry() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const data = currentMission.vis;
         const isPortrait = document.getElementById('main-wrapper').classList.contains('portrait');
         
-        // 摒弃读取 DOM 造成的不稳定反馈，直接按照屏幕高度硬编码切分画版
-        const topSafeZone = isPortrait ? 110 : 80;  // 顶部给题干预留的绝对像素
-        const bottomSafeZone = isPortrait ? 80 : 50; // 底部给计分板预留的绝对像素
-        const sideSafeZone = Math.max(20, canvas.width * 0.08); // 边缘给标签预留的绝对宽度
+        // 彻底废弃对幽灵DOM的不稳定读取，采用完全硬编码预留空间
+        const topSafeZone = isPortrait ? 110 : 80;  
+        const bottomSafeZone = isPortrait ? 80 : 50; 
+        const sideSafeZone = Math.max(20, canvas.width * 0.08); 
         
         const drawW = Math.max(10, canvas.width - sideSafeZone * 2);
         const drawH = Math.max(10, canvas.height - topSafeZone - bottomSafeZone);
@@ -513,7 +549,7 @@
         const minX = Math.min(...pts.map(p => p[0])); const maxX = Math.max(...pts.map(p => p[0])); 
         const minY = Math.min(...pts.map(p => p[1])); const maxY = Math.max(...pts.map(p => p[1]));
         
-        // 放大倍率推到 0.95，尽可能占满可用空间
+        // 激进放大倍率，彻底释放图形空间
         const scale = Math.min(drawW / (maxX - minX), drawH / (maxY - minY)) * 0.95;
         
         const toScreen = (pt) => ({ 
@@ -538,7 +574,7 @@
         if (gameState === "SELECTION_PHASE") {
             const refColorRgb = varToRgb("--accent"); ctx.strokeStyle = `rgba(${refColorRgb}, 1)`; ctx.fillStyle = `rgba(${refColorRgb}, 0.2)`; ctx.lineWidth = Math.max(3, canvas.width * 0.006);
             
-            // 智能圆弧：防止在锐角时圆弧半径过大吞噬小边
+            // 智能圆弧计算：不再使用写死的巨大半径，而是根据实际边长自适应，杜绝吞噬边长
             const d1 = Math.hypot(pA.x - pRef.x, pA.y - pRef.y);
             const d2 = Math.hypot(pD.x - pRef.x, pD.y - pRef.y);
             const arcR = Math.max(12, Math.min(35, Math.min(d1, d2) * 0.35)); 
@@ -547,7 +583,6 @@
             ctx.beginPath(); ctx.moveTo(pRef.x, pRef.y); ctx.arc(pRef.x, pRef.y, arcR, Math.min(angA, angD), Math.max(angA, angD)); ctx.closePath(); ctx.fill(); ctx.stroke();
         }
 
-        // 标签的偏移也随图形主缩放进行自适应
         const labelOffset = Math.max(12, scale * 0.15); 
         drawVertexLabel(ctx, pA, data.top.name, 0, -labelOffset, "148, 163, 184"); drawVertexLabel(ctx, pRef, data.ref.name, 0, labelOffset, "148, 163, 184"); if(pOther) drawVertexLabel(ctx, pOther, data.other.name, 0, labelOffset, "148, 163, 184");
         
@@ -568,7 +603,6 @@
     
     function drawVertexLabel(ctx, p, text, offX, offY, colorRgb) { const fSize = Math.max(14, ctx.canvas.width * 0.035); ctx.fillStyle = `rgba(${colorRgb}, 1)`; ctx.font = `bold ${fSize}px sans-serif`; ctx.textAlign="center"; ctx.textBaseline="middle"; ctx.fillText(text, p.x + offX, p.y + offY); }
     
-    // 微缩内边距以降低边长碰撞率
     function drawEdgeLabel(ctx, p1, p2, text) {
         const mx = (p1.x + p2.x)/2; const my = (p1.y + p2.y)/2; 
         const fSize = Math.max(12, ctx.canvas.width * 0.035); ctx.font = `bold ${fSize}px 'Segoe UI'`; 
@@ -592,8 +626,10 @@
         if (gameState === "GAMEOVER") return;
         try {
             if (combo >= 3 && !isHardMode) { isHardMode = true; try{ SoundManager.play('levelUp'); }catch(e){} document.getElementById("level-up-banner").classList.add("show"); setTimeout(()=> document.getElementById("level-up-banner").classList.remove("show"), 1500); }
-            let pool = isHardMode ? hardMissions : easyMissions; let prevId = currentMission ? currentMission.id : -1; let newIdx; do { newIdx = Math.floor(Math.random() * pool.length); } while (newIdx === prevId && pool.length > 1);
-            currentMission = pool[newIdx]; currentMission.id = newIdx; numFilled = false; denFilled = false; flashEdge = null; isDragging = false;
+            
+            currentMission = generateMission(isHardMode); 
+            
+            numFilled = false; denFilled = false; flashEdge = null; isDragging = false;
             document.getElementById("question-text").innerHTML = `在 \\(\\triangle ABC\\) 中，求 \\(${currentMission.ratioMath}\\)`; document.getElementById("ratio-label").innerHTML = `\\(${currentMission.ratioMath}\\)`;
             resetSlot("numerator-slot", "分子"); resetSlot("denominator-slot", "分母");
             if (isHardMode) { gameState = "DRAWING_PHASE"; document.getElementById("formula-zone").classList.add("locked"); } else { gameState = "SELECTION_PHASE"; document.getElementById("formula-zone").classList.remove("locked"); }
