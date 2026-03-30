@@ -298,11 +298,7 @@
         }
     };
 
-    // ==========================================
-    // 演算法重構：動態題庫引擎與空間變換
-    // ==========================================
     function generateMission(level) {
-        // 隨機勾股數引擎
         const triples = [
             [3,4,5], [4,3,5], [5,12,13], [12,5,13], 
             [8,15,17], [15,8,17], [7,24,25], [24,7,25], 
@@ -311,7 +307,6 @@
         const t = triples[Math.floor(Math.random() * triples.length)];
         const opp = t[0], adj = t[1], hyp = t[2];
 
-        // 隨機抽樣目標函數
         const funcs = [
             { name: '\\sin', num: 'opp', den: 'hyp' },
             { name: '\\cos', num: 'adj', den: 'hyp' },
@@ -319,7 +314,6 @@
         ];
         const func = funcs[Math.floor(Math.random() * funcs.length)];
 
-        // 隨機頂點映射，賦予幾何形變的絕對不可預測性
         const letters = ['A', 'B', 'C'];
         for(let i = letters.length - 1; i > 0; i--){
             const j = Math.floor(Math.random() * (i + 1));
@@ -328,7 +322,6 @@
         const nameTop = letters[0], nameRef = letters[1], nameOther = letters[2];
         const dir = Math.random() > 0.5 ? 1 : -1;
 
-        // Level 3 專屬：空間全向旋轉（避免過於貼近正交座標系）
         let angle = 0;
         if (level === 3) {
             const rotatedAngles = [45, 60, 120, 135, 210, 225, 300, 315];
@@ -343,13 +336,12 @@
                 data: { opp: opp.toString(), adj: adj.toString(), hyp: hyp.toString() }
             };
         } else {
-            // Level 2/3 智能生成銳角/鈍角分佈，保證目標角始終處於安全求解狀態
             let otherX;
             let absAdj = Math.abs(adj);
             if (Math.random() > 0.5 || absAdj <= 3) {
-                otherX = -dir * (Math.random() * 1.5 + 0.5) * opp; // 銳角
+                otherX = -dir * (Math.random() * 1.5 + 0.5) * opp; 
             } else {
-                otherX = dir * (Math.random() * (absAdj - 2) + 1); // 鈍角
+                otherX = dir * (Math.random() * (absAdj - 2) + 1); 
             }
             return {
                 type: "hard",
@@ -476,7 +468,6 @@
         drawGeometry(); ctx.strokeStyle = "#FACC15"; ctx.lineWidth = Math.max(6, canvas.width * 0.015); ctx.setLineDash([15, 15]); ctx.beginPath(); ctx.moveTo(drawStartX, drawStartY); ctx.lineTo(mouseX, mouseY); ctx.stroke(); ctx.setLineDash([]);
     }
 
-    // 演算法核心：導入嚴密的向量滑動意圖識別判定
     function onPointerUp(e) {
         const pos = getCanvasCoords(e.clientX, e.clientY);
         if(isDragging) {
@@ -491,7 +482,6 @@
             let angleDiff = Math.abs(expectedAngle - dragAngle);
             if (angleDiff > Math.PI) angleDiff = 2 * Math.PI - angleDiff;
 
-            // 判斷閾值：滑動距離達標(40%)，且角度對準目標區域(容差~35度內)
             if (dragDist > Math.max(40, expectedDist * 0.4) && angleDiff < 0.6) {
                 createExplosion(targetFoot.x, targetFoot.y); showFloatingText("NICE LINE!", "#FACC15");
                 try { SoundManager.play('lineComplete', e.clientX); } catch(err){}
@@ -512,37 +502,59 @@
         if (bestEdge) handleEdgeSelection(bestEdge.id);
     }
 
-    // 核心重構：導入旋轉矩陣與輻射型標籤排佈
+    // ==========================================
+    // 终极修复：旋转真实包围盒 + 动态自适应安全边距
+    // ==========================================
     function drawGeometry() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         const data = currentMission.vis;
         const isPortrait = document.getElementById('main-wrapper').classList.contains('portrait');
         
-        const topSafeZone = isPortrait ? 110 : 80;  
-        const bottomSafeZone = isPortrait ? 80 : 50; 
-        const sideSafeZone = Math.max(20, canvas.width * 0.08); 
+        // 动态侦测顶部与底部物理占用，彻底解决遮挡
+        const headerEl = document.querySelector('.q-floating-header');
+        const headerHeight = headerEl ? headerEl.offsetHeight : 80;
+        
+        const topSafeZone = headerHeight + (isPortrait ? 50 : 30); 
+        const statsEl = document.getElementById('stats-card');
+        const statsHeight = statsEl ? statsEl.offsetHeight : 60;
+        const bottomSafeZone = isPortrait ? statsHeight + 30 : Math.max(60, canvas.height * 0.1);
+        
+        const sideSafeZone = Math.max(30, canvas.width * 0.1); 
         
         const drawW = Math.max(10, canvas.width - sideSafeZone * 2);
         const drawH = Math.max(10, canvas.height - topSafeZone - bottomSafeZone);
         
-        const pts = [data.top.pt, data.foot.pt, data.ref.pt]; if(data.other) pts.push(data.other.pt);
-        const minX = Math.min(...pts.map(p => p[0])); const maxX = Math.max(...pts.map(p => p[0])); 
-        const minY = Math.min(...pts.map(p => p[1])); const maxY = Math.max(...pts.map(p => p[1]));
-        const scale = Math.min(drawW / (maxX - minX), drawH / (maxY - minY)) * 0.95;
+        // 提取并执行真正的数学矩阵旋转
+        const rawPts = [data.top.pt, data.foot.pt, data.ref.pt]; 
+        if(data.other) rawPts.push(data.other.pt);
         
         const angle = currentMission.angle || 0;
+        const rotatePt = (pt, ang) => [
+            pt[0] * Math.cos(ang) - pt[1] * Math.sin(ang),
+            pt[0] * Math.sin(ang) + pt[1] * Math.cos(ang)
+        ];
+        
+        // 生成旋转后的物理点阵，以找出它真正的包围盒
+        const rotPts = rawPts.map(pt => rotatePt(pt, angle));
+        
+        const minX = Math.min(...rotPts.map(p => p[0])); 
+        const maxX = Math.max(...rotPts.map(p => p[0])); 
+        const minY = Math.min(...rotPts.map(p => p[1])); 
+        const maxY = Math.max(...rotPts.map(p => p[1]));
+        
+        // 使用绝对真实的包围盒进行缩放（预留标签位）
+        const scale = Math.min(drawW / (maxX - minX), drawH / (maxY - minY)) * 0.82;
+        
         const cx = canvas.width / 2;
         const cy = topSafeZone + drawH / 2;
 
-        const toScreen = (pt) => { 
-            let sx = cx + (pt[0] - (minX+maxX)/2) * scale;
-            let sy = cy - (pt[1] - (minY+maxY)/2) * scale;
-            if (angle !== 0) {
-                const rx = (sx - cx) * Math.cos(angle) - (sy - cy) * Math.sin(angle) + cx;
-                const ry = (sx - cx) * Math.sin(angle) + (sy - cy) * Math.cos(angle) + cy;
-                return { x: rx, y: ry };
-            }
-            return { x: sx, y: sy };
+        // 最终屏幕映射
+        const toScreen = (rawPt) => { 
+            const rot = rotatePt(rawPt, angle);
+            return { 
+                x: cx + (rot[0] - (minX+maxX)/2) * scale, 
+                y: cy - (rot[1] - (minY+maxY)/2) * scale 
+            };
         };
         
         const pA = toScreen(data.top.pt); const pD = toScreen(data.foot.pt); const pRef = toScreen(data.ref.pt); const pOther = data.other ? toScreen(data.other.pt) : null;
@@ -582,7 +594,6 @@
         }
     }
 
-    // 向量式直角繪製，保證旋轉時不變形
     function drawRightAngle(ctx, vertex, p1, p2, size) { 
         let v1x = p1.x - vertex.x, v1y = p1.y - vertex.y; let len1 = Math.hypot(v1x, v1y) || 1; v1x = (v1x / len1) * size; v1y = (v1y / len1) * size;
         let v2x = p2.x - vertex.x, v2y = p2.y - vertex.y; let len2 = Math.hypot(v2x, v2y) || 1; v2x = (v2x / len2) * size; v2y = (v2y / len2) * size;
@@ -590,7 +601,6 @@
         ctx.beginPath(); ctx.moveTo(vertex.x + v1x, vertex.y + v1y); ctx.lineTo(vertex.x + v1x + v2x, vertex.y + v1y + v2y); ctx.lineTo(vertex.x + v2x, vertex.y + v2y); ctx.stroke(); 
     }
     
-    // 智慧型輻射標籤排佈，保證翻轉時絕不重疊
     function drawVertexLabelSmart(ctx, p, text, cx, cy, offsetDist, colorRgb) { 
         const dx = p.x - cx, dy = p.y - cy; const len = Math.hypot(dx, dy) || 1;
         const offX = (dx / len) * offsetDist, offY = (dy / len) * offsetDist;
@@ -621,7 +631,6 @@
     function nextMission() {
         if (gameState === "GAMEOVER") return;
         try {
-            // 動態難度晉級邏輯
             if (combo >= 6 && currentLevel < 3) {
                 currentLevel = 3; try{ SoundManager.play('levelUp'); }catch(e){}
                 const banner = document.getElementById("level-up-banner"); banner.innerText = "🌀 终极挑战：全向空间建构！"; banner.classList.add("show"); setTimeout(()=> banner.classList.remove("show"), 1500);
